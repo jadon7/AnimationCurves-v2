@@ -2,9 +2,8 @@
 
 ## 1. Overview
 
-Animation Curves v2 is an After Effects ScriptUI panel that applies interpolation curves to selected keyframed properties using generated expressions. Curves are grouped by platform source:
+Animation Curves v2 is an After Effects ScriptUI panel that applies interpolation curves to selected keyframed properties using generated expressions. The current library includes 5 physics-based curves:
 - Rive
-- Android
 - iOS
 
 ## 2. Install the Plugin
@@ -21,8 +20,7 @@ Animation Curves v2 is an After Effects ScriptUI panel that applies interpolatio
 ## Tabs
 
 - **Rive** tab: Rive-style elastic easing.
-- **Android** tab: Android interpolators and Material-like motion curves.
-- **iOS** tab: UIView-like easing, spring presets, and Core Animation cubic curves.
+- **iOS** tab: Spring presets and custom spring controls.
 
 ## Shared Controls
 
@@ -33,7 +31,7 @@ Animation Curves v2 is an After Effects ScriptUI panel that applies interpolatio
 
 ## 4. How to Use Each Tab
 
-1. Select the target tab (`Rive`, `Android`, or `iOS`).
+1. Select the target tab (`Rive` or `iOS`).
 2. Pick a curve from the dropdown.
 3. Adjust parameters with sliders/input fields (if available).
 4. Verify values in the preview panel.
@@ -48,32 +46,8 @@ Animation Curves v2 is an After Effects ScriptUI panel that applies interpolatio
 - `period` (0.1 to 2.0): Controls oscillation frequency.
 - `easingType` (`Ease Out`, `Ease In`, `Ease In-Out`): Controls entry/exit behavior.
 
-## Android
-
-- **Linear**: No parameters.
-- **Accelerate**
-- `factor` (0.1 to 3.0): Higher value increases acceleration.
-- **Decelerate**
-- `factor` (0.1 to 3.0): Higher value increases deceleration.
-- **AccelerateDecelerate**: No parameters.
-- **Anticipate**
-- `tension` (0.0 to 5.0): Pull-back amount before moving forward.
-- **Overshoot**
-- `tension` (0.0 to 5.0): Overshoot amount after target.
-- **AnticipateOvershoot**
-- `tension` (0.0 to 5.0): Combined pull-back and overshoot intensity.
-- **Bounce**: No parameters.
-- **FastOutSlowIn**: No parameters.
-- **FastOutLinearIn**: No parameters.
-- **LinearOutSlowIn**: No parameters.
-
 ## iOS
 
-- **Linear**: No parameters.
-- **Default**: No parameters.
-- **EaseIn**: No parameters.
-- **EaseOut**: No parameters.
-- **EaseInOut**: No parameters.
 - **Spring Default**
 - `damping` (0.1 to 1.0): Higher value reduces bounce.
 - `velocity` (0.0 to 3.0): Initial speed at animation start.
@@ -84,11 +58,6 @@ Animation Curves v2 is an After Effects ScriptUI panel that applies interpolatio
 - `damping` (0.1 to 1.0), `velocity` (0.0 to 3.0), `duration` (0.1 to 2.0): More pronounced bounce preset.
 - **Spring Custom**
 - `damping` (0.1 to 1.0), `velocity` (0.0 to 3.0), `duration` (0.1 to 2.0): Fully tunable spring behavior.
-- **CA Default**: No parameters.
-- **CA EaseIn**: No parameters.
-- **CA EaseOut**: No parameters.
-- **CA EaseInEaseOut**: No parameters.
-- **CA Linear**: No parameters.
 
 ## 6. Apply Curves to Keyframes
 
@@ -135,4 +104,3 @@ Notes:
 
 - Adobe After Effects CC 2015+
 - Tested target range from project requirements: CC 2015 through CC 2024
-

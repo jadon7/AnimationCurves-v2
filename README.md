@@ -1,17 +1,16 @@
 # Animation Curves v2 for After Effects
 
-Animation Curves v2 is a single-file ExtendScript plugin for Adobe After Effects that applies cross-platform timing curves directly to selected keyframed properties.
+Animation Curves v2 is a single-file ExtendScript plugin for Adobe After Effects that applies physics-based timing curves directly to selected keyframed properties.
 
-It includes **26 curves from 3 platforms**:
+It includes **5 curves from 2 platforms**:
 - **Rive**: 1 elastic curve
-- **Android**: 11 interpolators
-- **iOS**: 14 easing/spring/Core Animation curves
+- **iOS**: 4 spring curves
 
 ## Features
 
 - Single-file script (`AnimationCurves.jsx`), no external dependencies
-- Platform tabs: **Rive**, **Android**, **iOS**
-- 26 production-ready curves with parameter controls where applicable
+- Platform tabs: **Rive**, **iOS**
+- 5 production-ready physics curves with parameter controls
 - Real-time curve preview text (platform, curve, parameters)
 - One-click apply to selected keyframed properties
 - Batch apply to multiple properties in one operation
@@ -36,47 +35,23 @@ It includes **26 curves from 3 platforms**:
 1. Open a composition with keyframed properties.
 2. Select one or more properties in the timeline.
 3. Open `Window > AnimationCurves.jsx`.
-4. Choose a tab: **Rive**, **Android**, or **iOS**.
+4. Choose a tab: **Rive** or **iOS**.
 5. Select a curve and adjust parameters (if shown).
 6. Click **Apply to Selected Keyframes**.
 7. Preview animation and iterate parameters as needed.
 
-## Curve Library (26 Total)
+## Curve Library (5 Total)
 
 ### Rive (1)
 - Elastic
 
-### Android (11)
-- Linear
-- Accelerate
-- Decelerate
-- AccelerateDecelerate
-- Anticipate
-- Overshoot
-- AnticipateOvershoot
-- Bounce
-- FastOutSlowIn
-- FastOutLinearIn
-- LinearOutSlowIn
-
-### iOS (14)
-- Linear
-- Default
-- EaseIn
-- EaseOut
-- EaseInOut
+### iOS (4)
 - Spring Default
 - Spring Gentle
 - Spring Bouncy
 - Spring Custom
-- CA Default
-- CA EaseIn
-- CA EaseOut
-- CA EaseInEaseOut
-- CA Linear
 
 ## Documentation
 
 - User guide: `USER_GUIDE.md`
 - Practical examples: `EXAMPLES.md`
-

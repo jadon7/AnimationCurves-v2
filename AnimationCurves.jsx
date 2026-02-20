@@ -10,46 +10,6 @@
         return value;
     }
 
-    function CubicBezierInterpolator(x1, y1, x2, y2) {
-        this.x1 = x1;
-        this.y1 = y1;
-        this.x2 = x2;
-        this.y2 = y2;
-    }
-
-    CubicBezierInterpolator.prototype.getValue = function (t) {
-        var clampedT = clamp01(t);
-        if (clampedT === 0 || clampedT === 1) {
-            return clampedT;
-        }
-
-        var low = 0;
-        var high = 1;
-        var u = 0.5;
-        var i;
-
-        for (i = 0; i < 20; i += 1) {
-            u = (low + high) * 0.5;
-            if (this.sampleX(u) < clampedT) {
-                low = u;
-            } else {
-                high = u;
-            }
-        }
-
-        return clamp01(this.sampleY(u));
-    };
-
-    CubicBezierInterpolator.prototype.sampleX = function (u) {
-        var inv = 1 - u;
-        return (3 * inv * inv * u * this.x1) + (3 * inv * u * u * this.x2) + (u * u * u);
-    };
-
-    CubicBezierInterpolator.prototype.sampleY = function (u) {
-        var inv = 1 - u;
-        return (3 * inv * inv * u * this.y1) + (3 * inv * u * u * this.y2) + (u * u * u);
-    };
-
     function RiveElasticCurve(amplitude, period, easingType) {
         this.amplitude = (typeof amplitude === 'number') ? amplitude : 1.0;
         this.period = (typeof period === 'number' && period > 0) ? period : 0.3;
@@ -87,180 +47,6 @@
 
         x = a * Math.pow(2, -10 * clampedT) * Math.sin((clampedT - s) * (2 * Math.PI) / p) + 1;
         return clamp01(x);
-    };
-
-    function AndroidLinearInterpolator() {
-    }
-
-    AndroidLinearInterpolator.prototype.getValue = function (t) {
-        return clamp01(t);
-    };
-
-    function AndroidAccelerateInterpolator(factor) {
-        this.factor = (typeof factor === 'number') ? factor : 1.0;
-    }
-
-    AndroidAccelerateInterpolator.prototype.getValue = function (t) {
-        var clampedT = clamp01(t);
-        if (this.factor === 1.0) {
-            return clampedT * clampedT;
-        }
-        return Math.pow(clampedT, 2 * this.factor);
-    };
-
-    function AndroidDecelerateInterpolator(factor) {
-        this.factor = (typeof factor === 'number') ? factor : 1.0;
-    }
-
-    AndroidDecelerateInterpolator.prototype.getValue = function (t) {
-        var clampedT = clamp01(t);
-        if (this.factor === 1.0) {
-            return 1.0 - (1.0 - clampedT) * (1.0 - clampedT);
-        }
-        return 1.0 - Math.pow((1.0 - clampedT), 2 * this.factor);
-    };
-
-    function AndroidAccelerateDecelerateInterpolator() {
-    }
-
-    AndroidAccelerateDecelerateInterpolator.prototype.getValue = function (t) {
-        var clampedT = clamp01(t);
-        return Math.cos((clampedT + 1.0) * Math.PI) / 2.0 + 0.5;
-    };
-
-    function AndroidAnticipateInterpolator(tension) {
-        this.tension = (typeof tension === 'number') ? tension : 2.0;
-    }
-
-    AndroidAnticipateInterpolator.prototype.getValue = function (t) {
-        var clampedT = clamp01(t);
-        return clamp01(clampedT * clampedT * ((this.tension + 1.0) * clampedT - this.tension));
-    };
-
-    function AndroidOvershootInterpolator(tension) {
-        this.tension = (typeof tension === 'number') ? tension : 2.0;
-    }
-
-    AndroidOvershootInterpolator.prototype.getValue = function (t) {
-        var clampedT = clamp01(t) - 1.0;
-        return clamp01(clampedT * clampedT * ((this.tension + 1.0) * clampedT + this.tension) + 1.0);
-    };
-
-    function AndroidAnticipateOvershootInterpolator(tension) {
-        this.tension = (typeof tension === 'number') ? tension : 2.0;
-    }
-
-    AndroidAnticipateOvershootInterpolator.prototype.getValue = function (t) {
-        var clampedT = clamp01(t);
-        var s = this.tension * 1.5;
-
-        if (clampedT < 0.5) {
-            return clamp01(0.5 * this.anticipatePart(clampedT * 2.0, s));
-        }
-
-        return clamp01(0.5 * (this.overshootPart(clampedT * 2.0 - 2.0, s) + 2.0));
-    };
-
-    AndroidAnticipateOvershootInterpolator.prototype.anticipatePart = function (t, s) {
-        return t * t * ((s + 1.0) * t - s);
-    };
-
-    AndroidAnticipateOvershootInterpolator.prototype.overshootPart = function (t, s) {
-        return t * t * ((s + 1.0) * t + s);
-    };
-
-    function AndroidBounceInterpolator() {
-    }
-
-    AndroidBounceInterpolator.prototype.getValue = function (t) {
-        var clampedT = clamp01(t) * 1.1226;
-
-        if (clampedT < 0.3535) {
-            return clamp01(this.bounce(clampedT));
-        }
-
-        if (clampedT < 0.7408) {
-            return clamp01(this.bounce(clampedT - 0.54719) + 0.7);
-        }
-
-        if (clampedT < 0.9644) {
-            return clamp01(this.bounce(clampedT - 0.8526) + 0.9);
-        }
-
-        return clamp01(this.bounce(clampedT - 1.0435) + 0.95);
-    };
-
-    AndroidBounceInterpolator.prototype.bounce = function (t) {
-        return t * t * 8.0;
-    };
-
-    function AndroidFastOutSlowInInterpolator() {
-        this.bezier = new CubicBezierInterpolator(0.4, 0.0, 0.2, 1.0);
-    }
-
-    AndroidFastOutSlowInInterpolator.prototype.getValue = function (t) {
-        return this.bezier.getValue(t);
-    };
-
-    function AndroidFastOutLinearInInterpolator() {
-        this.bezier = new CubicBezierInterpolator(0.4, 0.0, 1.0, 1.0);
-    }
-
-    AndroidFastOutLinearInInterpolator.prototype.getValue = function (t) {
-        return this.bezier.getValue(t);
-    };
-
-    function AndroidLinearOutSlowInInterpolator() {
-        this.bezier = new CubicBezierInterpolator(0.0, 0.0, 0.2, 1.0);
-    }
-
-    AndroidLinearOutSlowInInterpolator.prototype.getValue = function (t) {
-        return this.bezier.getValue(t);
-    };
-
-    function IOSLinearCurve() {
-    }
-
-    IOSLinearCurve.prototype.getValue = function (t) {
-        return clamp01(t);
-    };
-
-    function IOSEaseInCurve() {
-    }
-
-    IOSEaseInCurve.prototype.getValue = function (t) {
-        var clampedT = clamp01(t);
-        return clampedT * clampedT;
-    };
-
-    function IOSEaseOutCurve() {
-    }
-
-    IOSEaseOutCurve.prototype.getValue = function (t) {
-        var clampedT = clamp01(t);
-        return 1.0 - (1.0 - clampedT) * (1.0 - clampedT);
-    };
-
-    function IOSEaseInOutCurve() {
-    }
-
-    IOSEaseInOutCurve.prototype.getValue = function (t) {
-        var clampedT = clamp01(t);
-        if (clampedT < 0.5) {
-            return 2.0 * clampedT * clampedT;
-        }
-        return 1.0 - 2.0 * (1.0 - clampedT) * (1.0 - clampedT);
-    };
-
-    function IOSDefaultCurve() {
-    }
-
-    IOSDefaultCurve.prototype.getValue = function (t) {
-        var clampedT = clamp01(t);
-        if (clampedT < 0.5) {
-            return 2.0 * clampedT * clampedT;
-        }
-        return 1.0 - 2.0 * (1.0 - clampedT) * (1.0 - clampedT);
     };
 
     function IOSSpringCurve(damping, velocity, duration) {
@@ -337,80 +123,17 @@
         return this.spring.getValue(t);
     };
 
-    function IOSCADefaultCurve() {
-        this.bezier = new CubicBezierInterpolator(0.25, 0.1, 0.25, 1.0);
-    }
-
-    IOSCADefaultCurve.prototype.getValue = function (t) {
-        return this.bezier.getValue(t);
-    };
-
-    function IOSCAEaseInCurve() {
-        this.bezier = new CubicBezierInterpolator(0.42, 0.0, 1.0, 1.0);
-    }
-
-    IOSCAEaseInCurve.prototype.getValue = function (t) {
-        return this.bezier.getValue(t);
-    };
-
-    function IOSCAEaseOutCurve() {
-        this.bezier = new CubicBezierInterpolator(0.0, 0.0, 0.58, 1.0);
-    }
-
-    IOSCAEaseOutCurve.prototype.getValue = function (t) {
-        return this.bezier.getValue(t);
-    };
-
-    function IOSCAEaseInEaseOutCurve() {
-        this.bezier = new CubicBezierInterpolator(0.42, 0.0, 0.58, 1.0);
-    }
-
-    IOSCAEaseInEaseOutCurve.prototype.getValue = function (t) {
-        return this.bezier.getValue(t);
-    };
-
-    function IOSCALinearCurve() {
-        this.bezier = new CubicBezierInterpolator(0.0, 0.0, 1.0, 1.0);
-    }
-
-    IOSCALinearCurve.prototype.getValue = function (t) {
-        return this.bezier.getValue(t);
-    };
-
     // Part 2: Expression Generator
     function ExpressionGenerator() {
         this.templates = {
             rive: {
                 elastic: this._buildRiveElastic
             },
-            android: {
-                linear: this._buildAndroidLinear,
-                accelerate: this._buildAndroidAccelerate,
-                decelerate: this._buildAndroidDecelerate,
-                acceleratedecelerate: this._buildAndroidAccelerateDecelerate,
-                anticipate: this._buildAndroidAnticipate,
-                overshoot: this._buildAndroidOvershoot,
-                anticipateovershoot: this._buildAndroidAnticipateOvershoot,
-                bounce: this._buildAndroidBounce,
-                fastoutslowin: this._buildAndroidFastOutSlowIn,
-                fastoutlinearin: this._buildAndroidFastOutLinearIn,
-                linearoutslowin: this._buildAndroidLinearOutSlowIn
-            },
             ios: {
-                linear: this._buildIOSLinear,
-                "default": this._buildIOSDefault,
-                easein: this._buildIOSEaseIn,
-                easeout: this._buildIOSEaseOut,
-                easeinout: this._buildIOSEaseInOut,
                 "spring default": this._buildIOSSpringDefault,
                 "spring gentle": this._buildIOSSpringGentle,
                 "spring bouncy": this._buildIOSSpringBouncy,
-                "spring custom": this._buildIOSSpringCustom,
-                "ca default": this._buildIOSCADefault,
-                "ca easein": this._buildIOSCAEaseIn,
-                "ca easeout": this._buildIOSCAEaseOut,
-                "ca easeineaseout": this._buildIOSCAEaseInEaseOut,
-                "ca linear": this._buildIOSCALinear
+                "spring custom": this._buildIOSSpringCustom
             }
         };
     }
@@ -461,38 +184,6 @@
             "linear(val, 0, 1, startVal, endVal);\n";
     };
 
-    ExpressionGenerator.prototype._buildCubicBezierCode = function (x1, y1, x2, y2) {
-        return "var x1 = " + x1 + ";\n" +
-            "var y1 = " + y1 + ";\n" +
-            "var x2 = " + x2 + ";\n" +
-            "var y2 = " + y2 + ";\n" +
-            "function sampleCurveX(u) {\n" +
-            "    var inv = 1 - u;\n" +
-            "    return (3 * inv * inv * u * x1) + (3 * inv * u * u * x2) + (u * u * u);\n" +
-            "}\n" +
-            "function sampleCurveY(u) {\n" +
-            "    var inv = 1 - u;\n" +
-            "    return (3 * inv * inv * u * y1) + (3 * inv * u * u * y2) + (u * u * u);\n" +
-            "}\n" +
-            "if (t === 0 || t === 1) {\n" +
-            "    val = t;\n" +
-            "} else {\n" +
-            "    var low = 0;\n" +
-            "    var high = 1;\n" +
-            "    var u = 0.5;\n" +
-            "    var i;\n" +
-            "    for (i = 0; i < 20; i++) {\n" +
-            "        u = (low + high) * 0.5;\n" +
-            "        if (sampleCurveX(u) < t) {\n" +
-            "            low = u;\n" +
-            "        } else {\n" +
-            "            high = u;\n" +
-            "        }\n" +
-            "    }\n" +
-            "    val = sampleCurveY(u);\n" +
-            "}\n";
-    };
-
     ExpressionGenerator.prototype._buildRiveElastic = function (params) {
         var amplitude = (params.amplitude !== undefined) ? params.amplitude : 1.0;
         var period = (params.period !== undefined) ? params.period : 0.3;
@@ -522,140 +213,6 @@
             'amplitude=' + amplitude + ', period=' + period + ', easingType=' + easingType,
             curveCode
         );
-    };
-
-    ExpressionGenerator.prototype._buildAndroidLinear = function () {
-        return this._composeExpression('Android - Linear', 'none', 'val = t;\n');
-    };
-
-    ExpressionGenerator.prototype._buildAndroidAccelerate = function (params) {
-        var factor = (params.factor !== undefined) ? params.factor : 1.0;
-        var curveCode = "var factor = " + factor + ";\n" +
-            "if (factor === 1.0) {\n" +
-            "    val = t * t;\n" +
-            "} else {\n" +
-            "    val = Math.pow(t, 2 * factor);\n" +
-            "}\n";
-
-        return this._composeExpression('Android - Accelerate', 'factor=' + factor, curveCode);
-    };
-
-    ExpressionGenerator.prototype._buildAndroidDecelerate = function (params) {
-        var factor = (params.factor !== undefined) ? params.factor : 1.0;
-        var curveCode = "var factor = " + factor + ";\n" +
-            "if (factor === 1.0) {\n" +
-            "    var oneMinusT = 1 - t;\n" +
-            "    val = 1 - oneMinusT * oneMinusT;\n" +
-            "} else {\n" +
-            "    val = 1 - Math.pow((1 - t), 2 * factor);\n" +
-            "}\n";
-
-        return this._composeExpression('Android - Decelerate', 'factor=' + factor, curveCode);
-    };
-
-    ExpressionGenerator.prototype._buildAndroidAccelerateDecelerate = function () {
-        return this._composeExpression(
-            'Android - AccelerateDecelerate',
-            'none',
-            'val = Math.cos((t + 1) * Math.PI) / 2 + 0.5;\n'
-        );
-    };
-
-    ExpressionGenerator.prototype._buildAndroidAnticipate = function (params) {
-        var tension = (params.tension !== undefined) ? params.tension : 2.0;
-        var curveCode = "var tension = " + tension + ";\n" +
-            "val = t * t * ((tension + 1) * t - tension);\n";
-
-        return this._composeExpression('Android - Anticipate', 'tension=' + tension, curveCode);
-    };
-
-    ExpressionGenerator.prototype._buildAndroidOvershoot = function (params) {
-        var tension = (params.tension !== undefined) ? params.tension : 2.0;
-        var curveCode = "var tension = " + tension + ";\n" +
-            "var x = t - 1;\n" +
-            "val = x * x * ((tension + 1) * x + tension) + 1;\n";
-
-        return this._composeExpression('Android - Overshoot', 'tension=' + tension, curveCode);
-    };
-
-    ExpressionGenerator.prototype._buildAndroidAnticipateOvershoot = function (params) {
-        var tension = (params.tension !== undefined) ? params.tension : 2.0;
-        var curveCode = "var tension = " + tension + ";\n" +
-            "var s = tension * 1.5;\n" +
-            "if (t < 0.5) {\n" +
-            "    var x1 = t * 2;\n" +
-            "    val = 0.5 * (x1 * x1 * ((s + 1) * x1 - s));\n" +
-            "} else {\n" +
-            "    var x2 = t * 2 - 2;\n" +
-            "    val = 0.5 * (x2 * x2 * ((s + 1) * x2 + s) + 2);\n" +
-            "}\n";
-
-        return this._composeExpression('Android - AnticipateOvershoot', 'tension=' + tension, curveCode);
-    };
-
-    ExpressionGenerator.prototype._buildAndroidBounce = function () {
-        var curveCode = "function bounce(x) {\n" +
-            "    return x * x * 8;\n" +
-            "}\n" +
-            "var x = t * 1.1226;\n" +
-            "if (x < 0.3535) {\n" +
-            "    val = bounce(x);\n" +
-            "} else if (x < 0.7408) {\n" +
-            "    val = bounce(x - 0.54719) + 0.7;\n" +
-            "} else if (x < 0.9644) {\n" +
-            "    val = bounce(x - 0.8526) + 0.9;\n" +
-            "} else {\n" +
-            "    val = bounce(x - 1.0435) + 0.95;\n" +
-            "}\n";
-
-        return this._composeExpression('Android - Bounce', 'none', curveCode);
-    };
-
-    ExpressionGenerator.prototype._buildAndroidFastOutSlowIn = function () {
-        return this._composeExpression('Android - FastOutSlowIn', 'none', this._buildCubicBezierCode(0.4, 0.0, 0.2, 1.0));
-    };
-
-    ExpressionGenerator.prototype._buildAndroidFastOutLinearIn = function () {
-        return this._composeExpression('Android - FastOutLinearIn', 'none', this._buildCubicBezierCode(0.4, 0.0, 1.0, 1.0));
-    };
-
-    ExpressionGenerator.prototype._buildAndroidLinearOutSlowIn = function () {
-        return this._composeExpression('Android - LinearOutSlowIn', 'none', this._buildCubicBezierCode(0.0, 0.0, 0.2, 1.0));
-    };
-
-    ExpressionGenerator.prototype._buildIOSLinear = function () {
-        return this._composeExpression('iOS - Linear', 'none', 'val = t;\n');
-    };
-
-    ExpressionGenerator.prototype._buildIOSDefault = function () {
-        var curveCode = "if (t < 0.5) {\n" +
-            "    val = 2 * t * t;\n" +
-            "} else {\n" +
-            "    val = 1 - Math.pow(-2 * t + 2, 2) / 2;\n" +
-            "}\n";
-
-        return this._composeExpression('iOS - Default', 'none', curveCode);
-    };
-
-    ExpressionGenerator.prototype._buildIOSEaseIn = function () {
-        return this._composeExpression('iOS - EaseIn', 'none', 'val = t * t;\n');
-    };
-
-    ExpressionGenerator.prototype._buildIOSEaseOut = function () {
-        var curveCode = "var oneMinusT = 1 - t;\n" +
-            "val = 1 - oneMinusT * oneMinusT;\n";
-
-        return this._composeExpression('iOS - EaseOut', 'none', curveCode);
-    };
-
-    ExpressionGenerator.prototype._buildIOSEaseInOut = function () {
-        var curveCode = "if (t < 0.5) {\n" +
-            "    val = 2 * t * t;\n" +
-            "} else {\n" +
-            "    val = 1 - Math.pow(-2 * t + 2, 2) / 2;\n" +
-            "}\n";
-
-        return this._composeExpression('iOS - EaseInOut', 'none', curveCode);
     };
 
     ExpressionGenerator.prototype._buildIOSSpringCode = function (damping, velocity, duration) {
@@ -728,26 +285,6 @@
             curveCode,
             { usePhysicalDuration: true, duration: duration }
         );
-    };
-
-    ExpressionGenerator.prototype._buildIOSCADefault = function () {
-        return this._composeExpression('iOS - CA Default', 'none', this._buildCubicBezierCode(0.25, 0.1, 0.25, 1.0));
-    };
-
-    ExpressionGenerator.prototype._buildIOSCAEaseIn = function () {
-        return this._composeExpression('iOS - CA EaseIn', 'none', this._buildCubicBezierCode(0.42, 0.0, 1.0, 1.0));
-    };
-
-    ExpressionGenerator.prototype._buildIOSCAEaseOut = function () {
-        return this._composeExpression('iOS - CA EaseOut', 'none', this._buildCubicBezierCode(0.0, 0.0, 0.58, 1.0));
-    };
-
-    ExpressionGenerator.prototype._buildIOSCAEaseInEaseOut = function () {
-        return this._composeExpression('iOS - CA EaseInEaseOut', 'none', this._buildCubicBezierCode(0.42, 0.0, 0.58, 1.0));
-    };
-
-    ExpressionGenerator.prototype._buildIOSCALinear = function () {
-        return this._composeExpression('iOS - CA Linear', 'none', this._buildCubicBezierCode(0.0, 0.0, 1.0, 1.0));
     };
 
     // Part 3: Data Model
@@ -869,59 +406,7 @@
             throw new Error('Unsupported Rive curve: ' + type);
         }
 
-        if (p === 'android') {
-            if (t === 'linear') {
-                return new AndroidLinearInterpolator();
-            }
-            if (t === 'accelerate') {
-                return new AndroidAccelerateInterpolator(ensureNumber(cfg.factor, 'factor', 1.0));
-            }
-            if (t === 'decelerate') {
-                return new AndroidDecelerateInterpolator(ensureNumber(cfg.factor, 'factor', 1.0));
-            }
-            if (t === 'acceleratedecelerate') {
-                return new AndroidAccelerateDecelerateInterpolator();
-            }
-            if (t === 'anticipate') {
-                return new AndroidAnticipateInterpolator(ensureNumber(cfg.tension, 'tension', 2.0));
-            }
-            if (t === 'overshoot') {
-                return new AndroidOvershootInterpolator(ensureNumber(cfg.tension, 'tension', 2.0));
-            }
-            if (t === 'anticipateovershoot') {
-                return new AndroidAnticipateOvershootInterpolator(ensureNumber(cfg.tension, 'tension', 2.0));
-            }
-            if (t === 'bounce') {
-                return new AndroidBounceInterpolator();
-            }
-            if (t === 'fastoutslowin') {
-                return new AndroidFastOutSlowInInterpolator();
-            }
-            if (t === 'fastoutlinearin') {
-                return new AndroidFastOutLinearInInterpolator();
-            }
-            if (t === 'linearoutslowin') {
-                return new AndroidLinearOutSlowInInterpolator();
-            }
-            throw new Error('Unsupported Android curve: ' + type);
-        }
-
         if (p === 'ios') {
-            if (t === 'linear') {
-                return new IOSLinearCurve();
-            }
-            if (t === 'default') {
-                return new IOSDefaultCurve();
-            }
-            if (t === 'easein') {
-                return new IOSEaseInCurve();
-            }
-            if (t === 'easeout') {
-                return new IOSEaseOutCurve();
-            }
-            if (t === 'easeinout') {
-                return new IOSEaseInOutCurve();
-            }
             if (t === 'spring default') {
                 return new IOSSpringDefaultCurve(
                     ensureNumber(cfg.damping, 'damping', 0.8),
@@ -950,21 +435,6 @@
                     ensurePositiveNumber(cfg.duration, 'duration', 1.0)
                 );
             }
-            if (t === 'ca default') {
-                return new IOSCADefaultCurve();
-            }
-            if (t === 'ca easein') {
-                return new IOSCAEaseInCurve();
-            }
-            if (t === 'ca easeout') {
-                return new IOSCAEaseOutCurve();
-            }
-            if (t === 'ca easeineaseout') {
-                return new IOSCAEaseInEaseOutCurve();
-            }
-            if (t === 'ca linear') {
-                return new IOSCALinearCurve();
-            }
             throw new Error('Unsupported iOS curve: ' + type);
         }
 
@@ -973,6 +443,7 @@
 
     // Part 6: UI Components
     var PLATFORM_DATA = {
+        // Physics-based preset list (5 total): Rive Elastic + iOS Spring variants.
         Rive: {
             curves: [
                 {
@@ -985,28 +456,8 @@
                 }
             ]
         },
-        Android: {
-            curves: [
-                { name: 'Linear', params: [] },
-                { name: 'Accelerate', params: [{ key: 'factor', label: 'Factor', type: 'slider', min: 0.1, max: 3.0, step: 0.1, defaultValue: 1.0 }] },
-                { name: 'Decelerate', params: [{ key: 'factor', label: 'Factor', type: 'slider', min: 0.1, max: 3.0, step: 0.1, defaultValue: 1.0 }] },
-                { name: 'AccelerateDecelerate', params: [] },
-                { name: 'Anticipate', params: [{ key: 'tension', label: 'Tension', type: 'slider', min: 0.0, max: 5.0, step: 0.1, defaultValue: 2.0 }] },
-                { name: 'Overshoot', params: [{ key: 'tension', label: 'Tension', type: 'slider', min: 0.0, max: 5.0, step: 0.1, defaultValue: 2.0 }] },
-                { name: 'AnticipateOvershoot', params: [{ key: 'tension', label: 'Tension', type: 'slider', min: 0.0, max: 5.0, step: 0.1, defaultValue: 2.0 }] },
-                { name: 'Bounce', params: [] },
-                { name: 'FastOutSlowIn', params: [] },
-                { name: 'FastOutLinearIn', params: [] },
-                { name: 'LinearOutSlowIn', params: [] }
-            ]
-        },
         iOS: {
             curves: [
-                { name: 'Linear', params: [] },
-                { name: 'Default', params: [] },
-                { name: 'EaseIn', params: [] },
-                { name: 'EaseOut', params: [] },
-                { name: 'EaseInOut', params: [] },
                 {
                     name: 'Spring Default',
                     params: [
@@ -1038,12 +489,7 @@
                         { key: 'velocity', label: 'Velocity', type: 'slider', min: 0.0, max: 3.0, step: 0.01, defaultValue: 0.0 },
                         { key: 'duration', label: 'Duration', type: 'slider', min: 0.1, max: 2.0, step: 0.01, defaultValue: 0.5 }
                     ]
-                },
-                { name: 'CA Default', params: [] },
-                { name: 'CA EaseIn', params: [] },
-                { name: 'CA EaseOut', params: [] },
-                { name: 'CA EaseInEaseOut', params: [] },
-                { name: 'CA Linear', params: [] }
+                }
             ]
         }
     };
@@ -1061,7 +507,6 @@
         tabs.preferredSize = [310, 490];
 
         var riveTab = tabs.add('tab', undefined, 'Rive');
-        var androidTab = tabs.add('tab', undefined, 'Android');
         var iosTab = tabs.add('tab', undefined, 'iOS');
 
         var uiByPlatform = {};
@@ -1386,7 +831,6 @@
         }
 
         buildTabContent(riveTab, 'Rive');
-        buildTabContent(androidTab, 'Android');
         buildTabContent(iosTab, 'iOS');
 
         var previewPanel = win.add('panel', undefined, 'Curve Preview');
@@ -1611,9 +1055,6 @@
         if (p === 'ios') {
             return 'ios';
         }
-        if (p === 'android') {
-            return 'android';
-        }
         if (p === 'rive') {
             return 'rive';
         }
@@ -1624,39 +1065,6 @@
         var text = String(type || '').toLowerCase();
         text = text.replace(/\s+/g, ' ');
         text = text.replace(/-/g, '');
-        if (text === 'ease in') {
-            return 'easein';
-        }
-        if (text === 'ease out') {
-            return 'easeout';
-        }
-        if (text === 'ease inout' || text === 'ease in out') {
-            return 'easeinout';
-        }
-        if (text === 'accelerate decelerate') {
-            return 'acceleratedecelerate';
-        }
-        if (text === 'anticipate overshoot') {
-            return 'anticipateovershoot';
-        }
-        if (text === 'fast out slow in') {
-            return 'fastoutslowin';
-        }
-        if (text === 'fast out linear in') {
-            return 'fastoutlinearin';
-        }
-        if (text === 'linear out slow in') {
-            return 'linearoutslowin';
-        }
-        if (text === 'ca ease in') {
-            return 'ca easein';
-        }
-        if (text === 'ca ease out') {
-            return 'ca easeout';
-        }
-        if (text === 'ca ease in ease out') {
-            return 'ca easeineaseout';
-        }
         return text;
     }
 

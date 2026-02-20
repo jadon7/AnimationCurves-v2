@@ -1,6 +1,6 @@
 # Animation Curves v2 - Practical Examples
 
-This document provides real-world workflows for applying platform-specific motion styles in After Effects.
+This document provides real-world workflows for applying physics-based motion styles in After Effects.
 
 ## Example 1: Rive Elastic Bounce Effect
 
@@ -36,40 +36,40 @@ Create a playful elastic overshoot for a UI card scaling in.
 
 The card expands quickly, overshoots, then settles naturally.
 
-## Example 2: Android Material Design Motion
+## Example 2: iOS Gentle Spring Transition
 
 ## Goal
 
-Animate a floating action button moving upward with Material-style timing.
+Animate an interface element into place with a soft iOS-style spring settle.
 
 ## Setup
 
-1. Create a button layer.
-2. Add two `Position` keyframes over 18 to 24 frames.
+1. Create a layer to animate (card, modal, or button).
+2. Add two `Position` keyframes over 0.5 to 0.7 seconds.
 3. Select the animated `Position` property.
 
 ## Plugin Steps
 
-1. Open the panel and switch to the `Android` tab.
-2. Select `FastOutSlowIn`.
-3. No parameters are required.
+1. Open the panel and switch to the `iOS` tab.
+2. Select `Spring Gentle`.
+3. Start with:
+- `damping = 0.90`
+- `velocity = 0.00`
+- `duration = 0.60`
 4. Click `Apply to Selected Keyframes`.
-
-Alternative:
-- Use `LinearOutSlowIn` when movement starts immediately and eases into rest.
 
 ## Screenshot Description
 
-- `Android` tab selected.
-- Curve dropdown set to `FastOutSlowIn`.
-- Parameters panel hidden (no adjustable controls).
-- Preview box shows `Parameters: none`.
+- `iOS` tab selected.
+- Curve dropdown set to `Spring Gentle`.
+- Parameter panel shows damping, velocity, and duration controls.
+- Preview box shows the selected spring parameters.
 
 ## Expected Result
 
-Motion starts briskly and finishes with a smooth deceleration, matching Material feel.
+Motion reaches target smoothly with very limited bounce, suitable for subtle UI transitions.
 
-## Example 3: iOS Spring Animation
+## Example 3: iOS Spring Custom Animation
 
 ## Goal
 
@@ -112,4 +112,3 @@ Modal enters with a controlled spring settle that matches common iOS transitions
 - Use smaller amplitude/tension values first to avoid exaggerated motion.
 - Apply the same curve to related properties (`Position` + `Opacity`) for cohesive motion language.
 - If motion feels unstable, reset to default parameter values and iterate from there.
-
