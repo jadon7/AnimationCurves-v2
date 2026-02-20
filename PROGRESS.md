@@ -9,9 +9,9 @@
 
 ### 🔵 Instance 1: curves-math
 **Branch:** `feature/curves-math`  
-**Status:** 🟡 Running (PID: 70068)  
-**Progress:** 0/12 curves (Phase 1)  
-**Current Task:** Implementing Rive + Android curves
+**Status:** 🟡 Running (PID: 70808, 70823)  
+**Progress:** In Progress - Reading requirements and planning  
+**Current Task:** Implementing Rive + Android curves (12 total)
 
 **Completed:**
 - [ ] Rive Elastic (1 curve)
@@ -24,62 +24,21 @@
 
 ### 🔵 Instance 2: ui-components
 **Branch:** `feature/ui-components`  
-**Status:** 🟡 Running (PID: 70070)  
-**Progress:** 0%  
-**Current Task:** Building main window + tabs
-
-**Completed:**
-- [ ] Main window framework
-- [ ] Tab panel
-- [ ] Curve dropdown
-
-**Next Steps:**
-- Wait for Phase 1 completion (~30-60 min)
-
----
+**Status:** 🟡 Running (PID: 70814, 70824)  
+**Progress:** In Progress - Creating UI from scratch  
+**Current Task:** Building main window + tabs with ScriptUI
 
 ### 🔵 Instance 3: expression-generator
 **Branch:** `feature/expression-generator`  
-**Status:** 🟡 Running (PID: 70072)  
-**Progress:** 0/4 templates (Phase 1)  
-**Current Task:** Building generator framework
-
-**Completed:**
-- [ ] Generator framework
-- [ ] Rive Elastic template
-- [ ] Android Linear template
-- [ ] Android Accelerate template
-- [ ] Android Decelerate template
-
-**Next Steps:**
-- Wait for Phase 1 completion (~30-60 min)
-
----
-
-### 🔵 Instance 4: main-integration
-**Branch:** `feature/main-integration`  
-**Status:** ⚪ Waiting  
-**Progress:** 0%  
-**Current Task:** Waiting for Phase 3
-
-**Next Steps:**
-- Wait for Phase 1 & 2 completion
-
----
+**Status:** 🟡 Running (PID: 70810, 70825)  
+**Progress:** In Progress - Planning template structure  
+**Current Task:** Building generator framework + 4 templates
 
 ### 🔵 Instance 5: testing
 **Branch:** `feature/testing`  
-**Status:** 🟡 Running (PID: 70074)  
-**Progress:** 0%  
+**Status:** 🟡 Running (PID: 70812, 70880)  
+**Progress:** In Progress - Creating test directories  
 **Current Task:** Building test framework
-
-**Completed:**
-- [ ] Test framework structure
-- [ ] Unit test template
-- [ ] Test documentation
-
-**Next Steps:**
-- Wait for Phase 1 completion (~30-60 min)
 
 ---
 
