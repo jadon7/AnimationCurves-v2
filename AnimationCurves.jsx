@@ -433,11 +433,23 @@
         return builder.call(this, normalizedParams);
     };
 
-    ExpressionGenerator.prototype._composeExpression = function (title, paramsLine, curveCode) {
+    ExpressionGenerator.prototype._composeExpression = function (title, paramsLine, curveCode, timingConfig) {
+        var config = timingConfig || {};
+        var usePhysicalDuration = config.usePhysicalDuration === true;
+        var fixedDuration = (typeof config.duration === 'number' && config.duration > 0) ? config.duration : 1.0;
+        var timeCode;
+
+        if (usePhysicalDuration) {
+            timeCode = "var duration = " + fixedDuration + ";\n" +
+                "var t = (duration <= 0) ? 1 : (time - inPoint) / duration;\n";
+        } else {
+            timeCode = "var duration = outPoint - inPoint;\n" +
+                "var t = (duration <= 0) ? 1 : (time - inPoint) / duration;\n";
+        }
+
         return "// " + title + "\n" +
             "// Parameters: " + paramsLine + "\n" +
-            "var duration = outPoint - inPoint;\n" +
-            "var t = (duration <= 0) ? 1 : (time - inPoint) / duration;\n" +
+            timeCode +
             "if (t <= 0) t = 0;\n" +
             "if (t >= 1) t = 1;\n" +
             "\n" +
@@ -671,7 +683,8 @@
         return this._composeExpression(
             'iOS - Spring Default',
             'damping=' + damping + ', velocity=' + velocity + ', duration=' + duration,
-            curveCode
+            curveCode,
+            { usePhysicalDuration: true, duration: duration }
         );
     };
 
@@ -684,7 +697,8 @@
         return this._composeExpression(
             'iOS - Spring Gentle',
             'damping=' + damping + ', velocity=' + velocity + ', duration=' + duration,
-            curveCode
+            curveCode,
+            { usePhysicalDuration: true, duration: duration }
         );
     };
 
@@ -697,7 +711,8 @@
         return this._composeExpression(
             'iOS - Spring Bouncy',
             'damping=' + damping + ', velocity=' + velocity + ', duration=' + duration,
-            curveCode
+            curveCode,
+            { usePhysicalDuration: true, duration: duration }
         );
     };
 
@@ -710,7 +725,8 @@
         return this._composeExpression(
             'iOS - Spring Custom',
             'damping=' + damping + ', velocity=' + velocity + ', duration=' + duration,
-            curveCode
+            curveCode,
+            { usePhysicalDuration: true, duration: duration }
         );
     };
 
@@ -1111,32 +1127,37 @@
             return PLATFORM_DATA[platformName].curves[idx];
         }
 
+        function createPreviewCurve() {
+            var curveDef = getSelectedCurveDef(currentPlatform);
+            var paramsObj;
+            if (!curveDef) {
+                return null;
+            }
+            paramsObj = viewModel.getParams();
+            return viewModel.curveFactory.createCurve(currentPlatform, curveDef.name, paramsObj);
+        }
+
         function updatePreview() {
             var curveDef = getSelectedCurveDef(currentPlatform);
-            var lines = [];
-            var params;
-            var i;
-            var paramsObj;
+            var curve = null;
+            var errorMessage = '';
 
-            lines.push('Platform: ' + currentPlatform);
-            if (!curveDef) {
-                lines.push('Curve: (none)');
-                lines.push('Parameters: -');
-            } else {
-                lines.push('Curve: ' + curveDef.name);
-                paramsObj = viewModel.getParams();
-                params = curveDef.params;
-                if (!params || params.length === 0) {
-                    lines.push('Parameters: none');
-                } else {
-                    lines.push('Parameters:');
-                    for (i = 0; i < params.length; i += 1) {
-                        lines.push(' - ' + params[i].label + ': ' + paramsObj[params[i].key]);
-                    }
-                }
+            try {
+                curve = createPreviewCurve();
+            } catch (err) {
+                errorMessage = String(err);
             }
 
-            previewText.text = lines.join('\n');
+            if (!curve) {
+                previewStatus.text = errorMessage ? ('Preview unavailable: ' + errorMessage) : 'Select a curve to preview.';
+            } else {
+                previewStatus.text = currentPlatform + ' - ' + curveDef.name;
+            }
+
+            previewCanvas.previewCurve = curve;
+            if (win && win.visible) {
+                win.update();
+            }
         }
 
         function clearParamControls(ui) {
@@ -1372,8 +1393,88 @@
         previewPanel.alignChildren = ['fill', 'top'];
         previewPanel.preferredSize = [310, 150];
 
-        var previewText = previewPanel.add('edittext', undefined, '', { multiline: true, readonly: true });
-        previewText.preferredSize = [290, 110];
+        var previewCanvas = previewPanel.add('panel');
+        previewCanvas.preferredSize = [280, 110];
+        previewCanvas.alignment = ['center', 'top'];
+        previewCanvas.previewCurve = null;
+
+        var previewStatus = previewPanel.add('statictext', undefined, 'Select a curve to preview.');
+        previewStatus.alignment = ['left', 'top'];
+        previewStatus.preferredSize = [290, 18];
+
+        previewCanvas.onDraw = function () {
+            var g = this.graphics;
+            var bounds = this.bounds;
+            var width = bounds.width;
+            var height = bounds.height;
+            var margin = 10;
+            var graphLeft = margin;
+            var graphTop = margin;
+            var graphWidth = width - margin * 2;
+            var graphHeight = height - margin * 2;
+            var x;
+            var y;
+            var i;
+            var t;
+            var sampleCount = 80;
+            var curve = this.previewCurve;
+            var value;
+            var curveX;
+            var curveY;
+
+            var gridPen = g.newPen(g.PenType.SOLID_COLOR, [0.78, 0.78, 0.78, 1], 1);
+            var axisPen = g.newPen(g.PenType.SOLID_COLOR, [0.0, 0.0, 0.0, 1], 1.5);
+            var curvePen = g.newPen(g.PenType.SOLID_COLOR, [0.12, 0.45, 0.86, 1], 2);
+            var bgBrush = g.newBrush(g.BrushType.SOLID_COLOR, [1, 1, 1, 1]);
+
+            g.newPath();
+            g.rectPath(0, 0, width, height);
+            g.fillPath(bgBrush);
+
+            for (i = 0; i <= 10; i += 1) {
+                x = graphLeft + (i / 10) * graphWidth;
+                y = graphTop + (i / 10) * graphHeight;
+
+                g.newPath();
+                g.moveTo(x, graphTop);
+                g.lineTo(x, graphTop + graphHeight);
+                g.strokePath(gridPen);
+
+                g.newPath();
+                g.moveTo(graphLeft, y);
+                g.lineTo(graphLeft + graphWidth, y);
+                g.strokePath(gridPen);
+            }
+
+            g.newPath();
+            g.moveTo(graphLeft, graphTop + graphHeight);
+            g.lineTo(graphLeft + graphWidth, graphTop + graphHeight);
+            g.strokePath(axisPen);
+
+            g.newPath();
+            g.moveTo(graphLeft, graphTop + graphHeight);
+            g.lineTo(graphLeft, graphTop);
+            g.strokePath(axisPen);
+
+            if (!curve) {
+                return;
+            }
+
+            g.newPath();
+            for (i = 0; i <= sampleCount; i += 1) {
+                t = i / sampleCount;
+                value = clamp(curve.getValue(t), 0, 1);
+                curveX = graphLeft + t * graphWidth;
+                curveY = graphTop + (1 - value) * graphHeight;
+
+                if (i === 0) {
+                    g.moveTo(curveX, curveY);
+                } else {
+                    g.lineTo(curveX, curveY);
+                }
+            }
+            g.strokePath(curvePen);
+        };
 
         var applyButton = win.add('button', undefined, 'Apply to Selected Keyframes');
         applyButton.preferredSize = [310, 32];
