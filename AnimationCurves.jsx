@@ -123,6 +123,53 @@
         return this.spring.getValue(t);
     };
 
+    function AndroidSpringCurve(tension, friction) {
+        this.tension = (typeof tension === 'number' && tension > 0) ? tension : 160.0;
+        this.friction = (typeof friction === 'number' && friction >= 0) ? friction : 18.0;
+    }
+
+    AndroidSpringCurve.prototype.getValue = function (t) {
+        var clampedT = clamp01(t);
+        if (clampedT === 0) {
+            return 0;
+        }
+        if (clampedT === 1) {
+            return 1;
+        }
+
+        var k = this.tension;
+        var c = this.friction;
+        var physicsTime = clampedT;
+        var delta = c * c - 4 * k;
+        var x;
+        var r1;
+        var r2;
+        var C1;
+        var C2;
+        var omega;
+        var B;
+
+        if (delta > 0) {
+            r1 = (-c + Math.sqrt(delta)) / 2;
+            r2 = (-c - Math.sqrt(delta)) / 2;
+            C1 = r2 / (r1 - r2);
+            C2 = -1 - C1;
+            x = 1 + C1 * Math.exp(r1 * physicsTime) + C2 * Math.exp(r2 * physicsTime);
+            return x;
+        }
+
+        if (delta === 0) {
+            r1 = -c / 2;
+            x = 1 + (-1 - r1 * physicsTime) * Math.exp(r1 * physicsTime);
+            return x;
+        }
+
+        omega = Math.sqrt(4 * k - c * c) / 2;
+        B = -c / (2 * omega);
+        x = 1 - Math.exp(-c * physicsTime / 2) * (Math.cos(omega * physicsTime) + B * Math.sin(omega * physicsTime));
+        return x;
+    };
+
     // Part 2: Expression Generator
     function ExpressionGenerator() {
         this.templates = {
@@ -134,6 +181,9 @@
                 "spring gentle": this._buildIOSSpringGentle,
                 "spring bouncy": this._buildIOSSpringBouncy,
                 "spring custom": this._buildIOSSpringCustom
+            },
+            android: {
+                spring: this._buildAndroidSpring
             }
         };
     }
@@ -181,7 +231,7 @@
             "\n" +
             "var startVal = valueAtTime(inPoint);\n" +
             "var endVal = valueAtTime(outPoint);\n" +
-            "linear(val, 0, 1, startVal, endVal);\n";
+            "startVal + (endVal - startVal) * val;\n";
     };
 
     ExpressionGenerator.prototype._buildRiveElastic = function (params) {
@@ -284,6 +334,42 @@
             'damping=' + damping + ', velocity=' + velocity + ', duration=' + duration,
             curveCode,
             { usePhysicalDuration: true, duration: duration }
+        );
+    };
+
+    ExpressionGenerator.prototype._buildAndroidSpringCode = function (tension, friction) {
+        return "var tension = " + tension + ";\n" +
+            "var friction = " + friction + ";\n" +
+            "var delta = friction * friction - 4 * tension;\n" +
+            "if (t === 0) {\n" +
+            "    val = 0;\n" +
+            "} else if (t === 1) {\n" +
+            "    val = 1;\n" +
+            "} else if (delta > 0) {\n" +
+            "    var r1 = (-friction + Math.sqrt(delta)) / 2;\n" +
+            "    var r2 = (-friction - Math.sqrt(delta)) / 2;\n" +
+            "    var C1 = r2 / (r1 - r2);\n" +
+            "    var C2 = -1 - C1;\n" +
+            "    val = 1 + C1 * Math.exp(r1 * t) + C2 * Math.exp(r2 * t);\n" +
+            "} else if (delta === 0) {\n" +
+            "    var r = -friction / 2;\n" +
+            "    val = 1 + (-1 - r * t) * Math.exp(r * t);\n" +
+            "} else {\n" +
+            "    var omega = Math.sqrt(4 * tension - friction * friction) / 2;\n" +
+            "    var B = -friction / (2 * omega);\n" +
+            "    val = 1 - Math.exp(-friction * t / 2) * (Math.cos(omega * t) + B * Math.sin(omega * t));\n" +
+            "}\n";
+    };
+
+    ExpressionGenerator.prototype._buildAndroidSpring = function (params) {
+        var tension = (params.tension !== undefined) ? params.tension : 160.0;
+        var friction = (params.friction !== undefined) ? params.friction : 18.0;
+        var curveCode = this._buildAndroidSpringCode(tension, friction);
+
+        return this._composeExpression(
+            'Android - SpringInterpolator',
+            'tension=' + tension + ', friction=' + friction,
+            curveCode
         );
     };
 
@@ -438,12 +524,22 @@
             throw new Error('Unsupported iOS curve: ' + type);
         }
 
+        if (p === 'android') {
+            if (t === 'spring') {
+                return new AndroidSpringCurve(
+                    ensurePositiveNumber(cfg.tension, 'tension', 160.0),
+                    ensureNonNegativeNumber(cfg.friction, 'friction', 18.0)
+                );
+            }
+            throw new Error('Unsupported Android curve: ' + type);
+        }
+
         throw new Error('Unsupported platform: ' + platform);
     };
 
     // Part 6: UI Components
     var PLATFORM_DATA = {
-        // Physics-based preset list (5 total): Rive Elastic + iOS Spring variants.
+        // Physics-based preset list (6 total): Rive Elastic + iOS Spring variants + Android Spring.
         Rive: {
             curves: [
                 {
@@ -491,6 +587,17 @@
                     ]
                 }
             ]
+        },
+        Android: {
+            curves: [
+                {
+                    name: 'Spring',
+                    params: [
+                        { key: 'tension', label: 'Tension', type: 'slider', min: 10.0, max: 300.0, step: 1.0, defaultValue: 160.0 },
+                        { key: 'friction', label: 'Friction', type: 'slider', min: 0.0, max: 80.0, step: 0.1, defaultValue: 18.0 }
+                    ]
+                }
+            ]
         }
     };
 
@@ -508,6 +615,7 @@
 
         var riveTab = tabs.add('tab', undefined, 'Rive');
         var iosTab = tabs.add('tab', undefined, 'iOS');
+        var androidTab = tabs.add('tab', undefined, 'Android');
 
         var uiByPlatform = {};
         var currentPlatform = 'Rive';
@@ -832,6 +940,7 @@
 
         buildTabContent(riveTab, 'Rive');
         buildTabContent(iosTab, 'iOS');
+        buildTabContent(androidTab, 'Android');
 
         var previewPanel = win.add('panel', undefined, 'Curve Preview');
         previewPanel.alignChildren = ['fill', 'top'];
@@ -1055,6 +1164,9 @@
         if (p === 'ios') {
             return 'ios';
         }
+        if (p === 'android') {
+            return 'android';
+        }
         if (p === 'rive') {
             return 'rive';
         }
@@ -1095,6 +1207,14 @@
         var v = ensureNumber(value, name, fallback);
         if (v <= 0) {
             throw new Error('Invalid parameter "' + name + '": must be greater than 0.');
+        }
+        return v;
+    }
+
+    function ensureNonNegativeNumber(value, name, fallback) {
+        var v = ensureNumber(value, name, fallback);
+        if (v < 0) {
+            throw new Error('Invalid parameter "' + name + '": must be greater than or equal to 0.');
         }
         return v;
     }
