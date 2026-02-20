@@ -23,6 +23,7 @@ function ExpressionGenerator() {
         },
         ios: {
             linear: this._buildIOSLinear,
+            "default": this._buildIOSDefault,
             easein: this._buildIOSEaseIn,
             easeout: this._buildIOSEaseOut,
             easeinout: this._buildIOSEaseInOut,
@@ -247,6 +248,16 @@ ExpressionGenerator.prototype._buildAndroidLinearOutSlowIn = function(params) {
 
 ExpressionGenerator.prototype._buildIOSLinear = function(params) {
     return this._composeExpression("iOS - Linear", "none", "val = t;\n");
+};
+
+ExpressionGenerator.prototype._buildIOSDefault = function(params) {
+    var curveCode = "if (t < 0.5) {\n" +
+        "    val = 2 * t * t;\n" +
+        "} else {\n" +
+        "    val = 1 - Math.pow(-2 * t + 2, 2) / 2;\n" +
+        "}\n";
+
+    return this._composeExpression("iOS - Default", "none", curveCode);
 };
 
 ExpressionGenerator.prototype._buildIOSEaseIn = function(params) {
