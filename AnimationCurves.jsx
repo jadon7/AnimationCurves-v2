@@ -32,21 +32,21 @@
 
         if (this.easingType === 'easeIn') {
             x = -(a * Math.pow(2, 10 * (clampedT - 1)) * Math.sin((clampedT - 1 - s) * (2 * Math.PI) / p));
-            return clamp01(x);
+            return x;
         }
 
         if (this.easingType === 'easeInOut') {
             var t2 = clampedT * 2;
             if (t2 < 1) {
                 x = -0.5 * (a * Math.pow(2, 10 * (t2 - 1)) * Math.sin((t2 - 1 - s) * (2 * Math.PI) / p));
-                return clamp01(x);
+                return x;
             }
             x = a * Math.pow(2, -10 * (t2 - 1)) * Math.sin((t2 - 1 - s) * (2 * Math.PI) / p) * 0.5 + 1;
-            return clamp01(x);
+            return x;
         }
 
         x = a * Math.pow(2, -10 * clampedT) * Math.sin((clampedT - s) * (2 * Math.PI) / p) + 1;
-        return clamp01(x);
+        return x;
     };
 
     function IOSSpringCurve(damping, velocity, duration) {
@@ -71,7 +71,7 @@
         var omega = 12 / duration;
         var envelope = Math.exp(-damping * 8 * tau);
         var y = 1.0 - envelope * (Math.cos(omega * tau) + (velocity / Math.max(omega, 0.0001)) * Math.sin(omega * tau));
-        return clamp01(y);
+        return y;
     };
 
     function IOSSpringDefaultCurve(damping, velocity, duration) {
@@ -738,9 +738,7 @@
             }
 
             previewCanvas.previewCurve = curve;
-            if (win && win.visible) {
-                win.update();
-            }
+            previewCanvas.notify('onDraw');
         }
 
         function clearParamControls(ui) {
