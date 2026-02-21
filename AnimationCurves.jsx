@@ -234,7 +234,7 @@
         };
     }
 
-    ExpressionGenerator.prototype.generate = function (platform, curveType, params) {
+    ExpressionGenerator.prototype.generate = function (platform, curveType, params, selectedKeyIndices) {
         var p = normalizePlatform(platform);
         var c = normalizeCurveType(curveType);
         var normalizedParams = params || {};
@@ -249,10 +249,10 @@
             throw new Error('Unsupported curve: ' + platform + ' / ' + curveType);
         }
 
-        return builder.call(this, normalizedParams);
+        return builder.call(this, normalizedParams, selectedKeyIndices);
     };
 
-    ExpressionGenerator.prototype._composeExpression = function (title, paramsLine, curveCode, timingConfig) {
+    ExpressionGenerator.prototype._composeExpression = function (title, paramsLine, curveCode, timingConfig, selectedKeyIndices) {
         var config = timingConfig || {};
         var usePhysicalDuration = config.usePhysicalDuration === true;
         var fixedDuration = (typeof config.duration === 'number' && config.duration > 0) ? config.duration : 1.0;
@@ -283,8 +283,29 @@
             "    var outPoint_k = key2.time;\n" +
             "    var startVal = key1.value;\n" +
             "    var endVal = key2.value;\n" +
-            "\n" +
-            "    // Calculate segment duration and progress t (0 to 1)\n";
+            "\n";
+
+        // Add selected keyframe check if indices are provided
+        if (selectedKeyIndices && selectedKeyIndices.length > 0) {
+            keyframeLogic += "    // Check if this segment should use the curve\n" +
+                "    var useCurve = false;\n";
+
+            var i;
+            for (i = 0; i < selectedKeyIndices.length; i += 1) {
+                if (i === 0) {
+                    keyframeLogic += "    if (n === " + selectedKeyIndices[i];
+                } else {
+                    keyframeLogic += " || n === " + selectedKeyIndices[i];
+                }
+            }
+            keyframeLogic += ") {\n" +
+                "      useCurve = true;\n" +
+                "    }\n" +
+                "\n" +
+                "    if (useCurve) {\n";
+        }
+
+        keyframeLogic += "    // Calculate segment duration and progress t (0 to 1)\n";
 
         if (usePhysicalDuration) {
             keyframeLogic += "    var duration = " + fixedDuration + ";\n";
@@ -301,8 +322,17 @@
             curveCode +
             "\n" +
             "    // Output final interpolation\n" +
-            "    startVal + (endVal - startVal) * val;\n" +
-            "  }\n" +
+            "    startVal + (endVal - startVal) * val;\n";
+
+        // Close the useCurve conditional if we added it
+        if (selectedKeyIndices && selectedKeyIndices.length > 0) {
+            keyframeLogic += "    } else {\n" +
+                "      // Use linear interpolation for non-selected segments\n" +
+                "      value;\n" +
+                "    }\n";
+        }
+
+        keyframeLogic += "  }\n" +
             "}\n";
 
         return "// " + title + "\n" +
@@ -310,7 +340,7 @@
             keyframeLogic;
     };
 
-    ExpressionGenerator.prototype._buildRiveElastic = function (params) {
+    ExpressionGenerator.prototype._buildRiveElastic = function (params, selectedKeyIndices) {
         var amplitude = (params.amplitude !== undefined) ? params.amplitude : 1.0;
         var period = (params.period !== undefined) ? params.period : 0.3;
         var easingType = normalizeEasingType(params.easingType || 'easeOut');
@@ -338,7 +368,9 @@
         return this._composeExpression(
             'Rive - Elastic',
             'amplitude=' + amplitude + ', period=' + period + ', easingType=' + easingType,
-            curveCode
+            curveCode,
+            undefined,
+            selectedKeyIndices
         );
     };
 
@@ -359,7 +391,7 @@
             "    }\n";
     };
 
-    ExpressionGenerator.prototype._buildIOSSpringDefault = function (params) {
+    ExpressionGenerator.prototype._buildIOSSpringDefault = function (params, selectedKeyIndices) {
         var damping = (params.damping !== undefined) ? params.damping : 0.8;
         var velocity = (params.velocity !== undefined) ? params.velocity : 0.0;
         var settlingTime = 4 / (Math.max(damping, 0.0001) * 12);
@@ -369,11 +401,12 @@
             'iOS - Spring Default',
             'damping=' + damping + ', velocity=' + velocity,
             curveCode,
-            { usePhysicalDuration: true, duration: settlingTime }
+            { usePhysicalDuration: true, duration: settlingTime },
+            selectedKeyIndices
         );
     };
 
-    ExpressionGenerator.prototype._buildIOSSpringGentle = function (params) {
+    ExpressionGenerator.prototype._buildIOSSpringGentle = function (params, selectedKeyIndices) {
         var damping = (params.damping !== undefined) ? params.damping : 0.9;
         var velocity = (params.velocity !== undefined) ? params.velocity : 0.0;
         var settlingTime = 4 / (Math.max(damping, 0.0001) * 12);
@@ -383,11 +416,12 @@
             'iOS - Spring Gentle',
             'damping=' + damping + ', velocity=' + velocity,
             curveCode,
-            { usePhysicalDuration: true, duration: settlingTime }
+            { usePhysicalDuration: true, duration: settlingTime },
+            selectedKeyIndices
         );
     };
 
-    ExpressionGenerator.prototype._buildIOSSpringBouncy = function (params) {
+    ExpressionGenerator.prototype._buildIOSSpringBouncy = function (params, selectedKeyIndices) {
         var damping = (params.damping !== undefined) ? params.damping : 0.5;
         var velocity = (params.velocity !== undefined) ? params.velocity : 0.0;
         var settlingTime = 4 / (Math.max(damping, 0.0001) * 12);
@@ -397,11 +431,12 @@
             'iOS - Spring Bouncy',
             'damping=' + damping + ', velocity=' + velocity,
             curveCode,
-            { usePhysicalDuration: true, duration: settlingTime }
+            { usePhysicalDuration: true, duration: settlingTime },
+            selectedKeyIndices
         );
     };
 
-    ExpressionGenerator.prototype._buildIOSSpringCustom = function (params) {
+    ExpressionGenerator.prototype._buildIOSSpringCustom = function (params, selectedKeyIndices) {
         var damping = (params.damping !== undefined) ? params.damping : 0.7;
         var velocity = (params.velocity !== undefined) ? params.velocity : 0.0;
         var settlingTime = 4 / (Math.max(damping, 0.0001) * 12);
@@ -411,7 +446,8 @@
             'iOS - Spring Custom',
             'damping=' + damping + ', velocity=' + velocity,
             curveCode,
-            { usePhysicalDuration: true, duration: settlingTime }
+            { usePhysicalDuration: true, duration: settlingTime },
+            selectedKeyIndices
         );
     };
 
@@ -445,7 +481,7 @@
             "    }\n";
     };
 
-    ExpressionGenerator.prototype._buildFolmeSpring = function (params) {
+    ExpressionGenerator.prototype._buildFolmeSpring = function (params, selectedKeyIndices) {
         var damping = (params.damping !== undefined) ? params.damping : 0.9;
         var response = (params.response !== undefined) ? params.response : 0.3;
         var referenceDuration = 1.0;
@@ -455,7 +491,8 @@
             'Folme - Spring',
             'damping=' + damping + ', response=' + response,
             curveCode,
-            { usePhysicalDuration: true, duration: referenceDuration }
+            { usePhysicalDuration: true, duration: referenceDuration },
+            selectedKeyIndices
         );
     };
 
@@ -483,7 +520,7 @@
             "    }\n";
     };
 
-    ExpressionGenerator.prototype._buildAndroidSpring = function (params) {
+    ExpressionGenerator.prototype._buildAndroidSpring = function (params, selectedKeyIndices) {
         var tension = (params.tension !== undefined) ? params.tension : 160.0;
         var friction = (params.friction !== undefined) ? params.friction : 18.0;
         var curveCode = this._buildAndroidSpringCode(tension, friction);
@@ -491,7 +528,9 @@
         return this._composeExpression(
             'Android - SpringInterpolator',
             'tension=' + tension + ', friction=' + friction,
-            curveCode
+            curveCode,
+            undefined,
+            selectedKeyIndices
         );
     };
 
@@ -579,13 +618,13 @@
         return this.model.getParams();
     };
 
-    ViewModel.prototype.generateExpression = function () {
+    ViewModel.prototype.generateExpression = function (selectedKeyIndices) {
         var platform = this.model.platform;
         var curveType = this.model.curveType;
         var params = this.model.getParams();
 
         this.curveFactory.createCurve(platform, curveType, params);
-        return this.expressionGenerator.generate(platform, curveType, params);
+        return this.expressionGenerator.generate(platform, curveType, params, selectedKeyIndices);
     };
 
     ViewModel.prototype._notify = function () {
@@ -1241,7 +1280,6 @@
     function applyToKeyframes(viewModel) {
         var comp;
         var selectedProps;
-        var expression;
         var i;
         var prop;
         var appliedCount = 0;
@@ -1259,12 +1297,6 @@
 
         selectedProps = comp.selectedProperties;
         if (!selectedProps || selectedProps.length === 0) {
-            return;
-        }
-
-        try {
-            expression = viewModel.generateExpression();
-        } catch (generateErr) {
             return;
         }
 
@@ -1288,7 +1320,23 @@
                     continue;
                 }
 
+                // Get selected keyframe indices
+                var selectedKeys = prop.selectedKeys;
+                var selectedKeyIndices = [];
+                var j;
+
+                if (selectedKeys && selectedKeys.length > 0) {
+                    for (j = 0; j < selectedKeys.length; j += 1) {
+                        selectedKeyIndices.push(selectedKeys[j]);
+                    }
+                } else {
+                    // If no keyframes are selected, skip this property
+                    skipped.push(prop.name + ': no keyframes selected');
+                    continue;
+                }
+
                 try {
+                    var expression = viewModel.generateExpression(selectedKeyIndices);
                     prop.expression = expression;
                     prop.expressionEnabled = true;
                     appliedCount += 1;
