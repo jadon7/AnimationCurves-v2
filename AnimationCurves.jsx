@@ -129,14 +129,6 @@
         this.response = (typeof response === 'number' && response > 0) ? response : 0.3;
     }
 
-    FolmeSpringCurve.prototype.getSettlingTime = function () {
-        var damping = Math.max(this.damping, 0.0001);
-        var response = Math.max(this.response, 0.0001);
-        var omega = 2 * Math.PI / response;
-        var settlingTime = 4 / (damping * omega);
-        return settlingTime;
-    };
-
     FolmeSpringCurve.prototype.getValue = function (t) {
         var clampedT = clamp01(t);
         if (clampedT === 0) {
@@ -148,14 +140,14 @@
 
         var damping = Math.max(this.damping, 0.0001);
         var response = Math.max(this.response, 0.0001);
-        var duration = this.getSettlingTime();
+        var referenceDuration = 1.0; // Fixed 1 second reference time
 
         var mass = 1;
         var tension = Math.pow(2 * Math.PI / response, 2) * mass;
         var dampingCoeff = 4 * Math.PI * damping * mass / response;
         dampingCoeff = Math.min(dampingCoeff, 60);
 
-        var physicsTime = clampedT * duration;
+        var physicsTime = clampedT * referenceDuration;
         var dt = 0.001;
         var steps = Math.floor(physicsTime / dt);
         var value = 0;
@@ -426,9 +418,7 @@
     ExpressionGenerator.prototype._buildFolmeSpringCode = function (damping, response) {
         return "    var damping = " + damping + ";\n" +
             "    var response = " + response + ";\n" +
-            "    var omega = 2 * Math.PI / Math.max(response, 0.0001);\n" +
-            "    var settlingTime = 4 / (Math.max(damping, 0.0001) * omega);\n" +
-            "    var springDuration = settlingTime;\n" +
+            "    var referenceDuration = 1.0;\n" +
             "    if (t === 0) {\n" +
             "      val = 0;\n" +
             "    } else if (t === 1) {\n" +
@@ -438,7 +428,7 @@
             "      var tension = Math.pow(2 * Math.PI / response, 2) * mass;\n" +
             "      var dampingCoeff = 4 * Math.PI * damping * mass / response;\n" +
             "      dampingCoeff = Math.min(dampingCoeff, 60);\n" +
-            "      var physicsTime = t * springDuration;\n" +
+            "      var physicsTime = t * referenceDuration;\n" +
             "      var dt = 0.001;\n" +
             "      var steps = Math.floor(physicsTime / dt);\n" +
             "      var value = 0;\n" +
@@ -458,15 +448,14 @@
     ExpressionGenerator.prototype._buildFolmeSpring = function (params) {
         var damping = (params.damping !== undefined) ? params.damping : 0.9;
         var response = (params.response !== undefined) ? params.response : 0.3;
-        var omega = 2 * Math.PI / Math.max(response, 0.0001);
-        var settlingTime = 4 / (Math.max(damping, 0.0001) * omega);
+        var referenceDuration = 1.0;
         var curveCode = this._buildFolmeSpringCode(damping, response);
 
         return this._composeExpression(
             'Folme - Spring',
             'damping=' + damping + ', response=' + response,
             curveCode,
-            { usePhysicalDuration: true, duration: settlingTime }
+            { usePhysicalDuration: true, duration: referenceDuration }
         );
     };
 
