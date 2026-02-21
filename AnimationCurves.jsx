@@ -210,53 +210,84 @@
         var config = timingConfig || {};
         var usePhysicalDuration = config.usePhysicalDuration === true;
         var fixedDuration = (typeof config.duration === 'number' && config.duration > 0) ? config.duration : 1.0;
-        var timeCode;
+
+        var keyframeLogic = "// Check if there are enough keyframes\n" +
+            "if (numKeys < 2) {\n" +
+            "  value;\n" +
+            "} else {\n" +
+            "  // Find which keyframe segment we're in\n" +
+            "  var n = 0;\n" +
+            "  if (numKeys > 0) {\n" +
+            "    n = nearestKey(time).index;\n" +
+            "    if (key(n).time > time) {\n" +
+            "      n--;\n" +
+            "    }\n" +
+            "  }\n" +
+            "\n" +
+            "  // Boundary handling\n" +
+            "  if (n === 0) {\n" +
+            "    valueAtTime(key(1).time);\n" +
+            "  } else if (n === numKeys) {\n" +
+            "    valueAtTime(key(numKeys).time);\n" +
+            "  } else {\n" +
+            "    // Get current segment keyframes\n" +
+            "    var key1 = key(n);\n" +
+            "    var key2 = key(n + 1);\n" +
+            "    var inPoint_k = key1.time;\n" +
+            "    var outPoint_k = key2.time;\n" +
+            "    var startVal = key1.value;\n" +
+            "    var endVal = key2.value;\n" +
+            "\n" +
+            "    // Calculate segment duration and progress t (0 to 1)\n";
 
         if (usePhysicalDuration) {
-            timeCode = "var duration = " + fixedDuration + ";\n" +
-                "var t = (duration <= 0) ? 1 : (time - inPoint) / duration;\n";
+            keyframeLogic += "    var duration = " + fixedDuration + ";\n";
         } else {
-            timeCode = "var duration = outPoint - inPoint;\n" +
-                "var t = (duration <= 0) ? 1 : (time - inPoint) / duration;\n";
+            keyframeLogic += "    var duration = outPoint_k - inPoint_k;\n";
         }
+
+        keyframeLogic += "    var t = (duration <= 0) ? 1 : (time - inPoint_k) / duration;\n" +
+            "    if (t <= 0) t = 0;\n" +
+            "    if (t >= 1) t = 1;\n" +
+            "\n" +
+            "    // Curve calculation\n" +
+            "    var val;\n" +
+            curveCode +
+            "\n" +
+            "    // Output final interpolation\n" +
+            "    startVal + (endVal - startVal) * val;\n" +
+            "  }\n" +
+            "}\n";
 
         return "// " + title + "\n" +
             "// Parameters: " + paramsLine + "\n" +
-            timeCode +
-            "if (t <= 0) t = 0;\n" +
-            "if (t >= 1) t = 1;\n" +
-            "\n" +
-            "var val;\n" +
-            curveCode +
-            "\n" +
-            "var startVal = valueAtTime(inPoint);\n" +
-            "var endVal = valueAtTime(outPoint);\n" +
-            "startVal + (endVal - startVal) * val;\n";
+            keyframeLogic;
     };
 
     ExpressionGenerator.prototype._buildRiveElastic = function (params) {
         var amplitude = (params.amplitude !== undefined) ? params.amplitude : 1.0;
         var period = (params.period !== undefined) ? params.period : 0.3;
         var easingType = normalizeEasingType(params.easingType || 'easeOut');
-        var curveCode = "var p = " + period + ";\n" +
-            "var a = Math.max(" + amplitude + ", 1.0);\n" +
-            "var s = p / (2 * Math.PI) * Math.asin(1 / a);\n" +
-            "if (t === 0) {\n" +
-            "    val = 0;\n" +
-            "} else if (t === 1) {\n" +
-            "    val = 1;\n" +
-            "} else if (\"" + easingType + "\" === \"easeOut\") {\n" +
-            "    val = a * Math.pow(2, -10 * t) * Math.sin((t - s) * (2 * Math.PI) / p) + 1;\n" +
-            "} else if (\"" + easingType + "\" === \"easeIn\") {\n" +
-            "    val = -(a * Math.pow(2, 10 * (t - 1)) * Math.sin((t - 1 - s) * (2 * Math.PI) / p));\n" +
-            "} else {\n" +
-            "    var t2 = t * 2;\n" +
-            "    if (t2 < 1) {\n" +
-            "        val = -0.5 * (a * Math.pow(2, 10 * (t2 - 1)) * Math.sin((t2 - 1 - s) * (2 * Math.PI) / p));\n" +
+        var curveCode = "    var p = " + period + ";\n" +
+            "    var a = Math.max(" + amplitude + ", 1.0);\n" +
+            "    var s = p / (2 * Math.PI) * Math.asin(1 / a);\n" +
+            "    var easeType = \"" + easingType + "\";\n" +
+            "    if (t === 0) {\n" +
+            "      val = 0;\n" +
+            "    } else if (t === 1) {\n" +
+            "      val = 1;\n" +
+            "    } else if (easeType === \"easeOut\") {\n" +
+            "      val = a * Math.pow(2, -10 * t) * Math.sin((t - s) * (2 * Math.PI) / p) + 1;\n" +
+            "    } else if (easeType === \"easeIn\") {\n" +
+            "      val = -(a * Math.pow(2, 10 * (t - 1)) * Math.sin((t - 1 - s) * (2 * Math.PI) / p));\n" +
             "    } else {\n" +
+            "      var t2 = t * 2;\n" +
+            "      if (t2 < 1) {\n" +
+            "        val = -0.5 * (a * Math.pow(2, 10 * (t2 - 1)) * Math.sin((t2 - 1 - s) * (2 * Math.PI) / p));\n" +
+            "      } else {\n" +
             "        val = a * Math.pow(2, -10 * (t2 - 1)) * Math.sin((t2 - 1 - s) * (2 * Math.PI) / p) * 0.5 + 1;\n" +
-            "    }\n" +
-            "}\n";
+            "      }\n" +
+            "    }\n";
 
         return this._composeExpression(
             'Rive - Elastic',
@@ -266,19 +297,19 @@
     };
 
     ExpressionGenerator.prototype._buildIOSSpringCode = function (damping, velocity, duration) {
-        return "var damping = " + damping + ";\n" +
-            "var velocity = " + velocity + ";\n" +
-            "var springDuration = " + duration + ";\n" +
-            "if (t === 0) {\n" +
-            "    val = 0;\n" +
-            "} else if (t === 1) {\n" +
-            "    val = 1;\n" +
-            "} else {\n" +
-            "    var tau = t * springDuration;\n" +
-            "    var omega = 12 / Math.max(springDuration, 0.0001);\n" +
-            "    var envelope = Math.exp(-damping * 8 * tau);\n" +
-            "    val = 1 - envelope * (Math.cos(omega * tau) + (velocity / Math.max(omega, 0.0001)) * Math.sin(omega * tau));\n" +
-            "}\n";
+        return "    var damping = " + damping + ";\n" +
+            "    var velocity = " + velocity + ";\n" +
+            "    var springDuration = " + duration + ";\n" +
+            "    if (t === 0) {\n" +
+            "      val = 0;\n" +
+            "    } else if (t === 1) {\n" +
+            "      val = 1;\n" +
+            "    } else {\n" +
+            "      var tau = t * springDuration;\n" +
+            "      var omega = 12 / Math.max(springDuration, 0.0001);\n" +
+            "      var envelope = Math.exp(-damping * 8 * tau);\n" +
+            "      val = 1 - envelope * (Math.cos(omega * tau) + (velocity / Math.max(omega, 0.0001)) * Math.sin(omega * tau));\n" +
+            "    }\n";
     };
 
     ExpressionGenerator.prototype._buildIOSSpringDefault = function (params) {
@@ -338,27 +369,27 @@
     };
 
     ExpressionGenerator.prototype._buildAndroidSpringCode = function (tension, friction) {
-        return "var tension = " + tension + ";\n" +
-            "var friction = " + friction + ";\n" +
-            "var delta = friction * friction - 4 * tension;\n" +
-            "if (t === 0) {\n" +
-            "    val = 0;\n" +
-            "} else if (t === 1) {\n" +
-            "    val = 1;\n" +
-            "} else if (delta > 0) {\n" +
-            "    var r1 = (-friction + Math.sqrt(delta)) / 2;\n" +
-            "    var r2 = (-friction - Math.sqrt(delta)) / 2;\n" +
-            "    var C1 = r2 / (r1 - r2);\n" +
-            "    var C2 = -1 - C1;\n" +
-            "    val = 1 + C1 * Math.exp(r1 * t) + C2 * Math.exp(r2 * t);\n" +
-            "} else if (delta === 0) {\n" +
-            "    var r = -friction / 2;\n" +
-            "    val = 1 + (-1 - r * t) * Math.exp(r * t);\n" +
-            "} else {\n" +
-            "    var omega = Math.sqrt(4 * tension - friction * friction) / 2;\n" +
-            "    var B = -friction / (2 * omega);\n" +
-            "    val = 1 - Math.exp(-friction * t / 2) * (Math.cos(omega * t) + B * Math.sin(omega * t));\n" +
-            "}\n";
+        return "    var tension = " + tension + ";\n" +
+            "    var friction = " + friction + ";\n" +
+            "    var delta = friction * friction - 4 * tension;\n" +
+            "    if (t === 0) {\n" +
+            "      val = 0;\n" +
+            "    } else if (t === 1) {\n" +
+            "      val = 1;\n" +
+            "    } else if (delta > 0) {\n" +
+            "      var r1 = (-friction + Math.sqrt(delta)) / 2;\n" +
+            "      var r2 = (-friction - Math.sqrt(delta)) / 2;\n" +
+            "      var C1 = r2 / (r1 - r2);\n" +
+            "      var C2 = -1 - C1;\n" +
+            "      val = 1 + C1 * Math.exp(r1 * t) + C2 * Math.exp(r2 * t);\n" +
+            "    } else if (delta === 0) {\n" +
+            "      var r = -friction / 2;\n" +
+            "      val = 1 + (-1 - r * t) * Math.exp(r * t);\n" +
+            "    } else {\n" +
+            "      var omega = Math.sqrt(4 * tension - friction * friction) / 2;\n" +
+            "      var B = -friction / (2 * omega);\n" +
+            "      val = 1 - Math.exp(-friction * t / 2) * (Math.cos(omega * t) + B * Math.sin(omega * t));\n" +
+            "    }\n";
     };
 
     ExpressionGenerator.prototype._buildAndroidSpring = function (params) {
@@ -1044,6 +1075,28 @@
         };
 
         applyButton.onClick = function () {
+            // Detect current active tab
+            var activePlatform = currentPlatform;
+            var ui = uiByPlatform[activePlatform];
+
+            // Check if a curve is selected
+            if (!ui || !ui.dropdown.selection || ui.dropdown.selection.index === 0) {
+                alert('Please select a curve from the ' + activePlatform + ' tab before applying.');
+                return;
+            }
+
+            // Get the selected curve definition
+            var curveDef = getSelectedCurveDef(activePlatform);
+            if (!curveDef) {
+                alert('No curve selected. Please select a curve first.');
+                return;
+            }
+
+            // Update viewModel with current tab's platform and curve
+            viewModel.setPlatform(activePlatform);
+            viewModel.setCurveType(curveDef.name);
+
+            // Apply to keyframes
             applyToKeyframes(viewModel);
         };
 
