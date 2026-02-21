@@ -750,7 +750,7 @@
         win.alignChildren = ['fill', 'top'];
         win.spacing = 8;
         win.margins = 10;
-        win.preferredSize = [330, 650];
+        win.preferredSize = [330, 640];
 
         var tabs = win.add('tabbedpanel');
         tabs.alignChildren = ['fill', 'top'];
@@ -1085,11 +1085,11 @@
 
         var previewPanel = win.add('panel');
         previewPanel.alignChildren = ['fill', 'top'];
-        previewPanel.preferredSize = [310, 120];
+        previewPanel.preferredSize = [310, 110];
 
         var previewCanvas = previewPanel.add('panel');
         previewCanvas.preferredSize = [310, 110];
-        previewCanvas.alignment = ['center', 'top'];
+        previewCanvas.alignment = ['fill', 'fill'];
         previewCanvas.previewCurve = null;
 
         previewCanvas.onDraw = function () {
@@ -1097,7 +1097,7 @@
             var bounds = this.bounds;
             var width = bounds.width;
             var height = bounds.height;
-            var margin = 15;
+            var margin = 0;
             var graphLeft = margin;
             var graphTop = margin;
             var graphWidth = width - margin * 2;
@@ -1180,7 +1180,7 @@
             var ui = uiByPlatform[activePlatform];
 
             // Check if a curve is selected
-            if (!ui || !ui.dropdown.selection || ui.dropdown.selection.index === 0) {
+            if (!ui || !ui.dropdown.selection) {
                 return;
             }
 
