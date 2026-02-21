@@ -738,9 +738,7 @@
             }
 
             previewCanvas.previewCurve = curve;
-            if (win && win.visible) {
-                win.update();
-            }
+            previewCanvas.notify('onDraw');
         }
 
         function clearParamControls(ui) {
@@ -1004,6 +1002,10 @@
             var value;
             var curveX;
             var curveY;
+            var minValue = 0;
+            var maxValue = 1;
+            var valueRange;
+            var samples = [];
 
             var gridPen = g.newPen(g.PenType.SOLID_COLOR, [0.78, 0.78, 0.78, 1], 1);
             var axisPen = g.newPen(g.PenType.SOLID_COLOR, [0.0, 0.0, 0.0, 1], 1.5);
@@ -1014,6 +1016,32 @@
             g.rectPath(0, 0, width, height);
             g.fillPath(bgBrush);
 
+            // If curve exists, sample all values to find min/max
+            if (curve) {
+                for (i = 0; i <= sampleCount; i += 1) {
+                    t = i / sampleCount;
+                    value = curve.getValue(t);
+                    samples.push(value);
+                    if (value < minValue) {
+                        minValue = value;
+                    }
+                    if (value > maxValue) {
+                        maxValue = value;
+                    }
+                }
+
+                // Add padding to the range
+                valueRange = maxValue - minValue;
+                if (valueRange < 0.1) {
+                    valueRange = 0.1;
+                }
+                minValue = minValue - valueRange * 0.1;
+                maxValue = maxValue + valueRange * 0.1;
+            }
+
+            valueRange = maxValue - minValue;
+
+            // Draw grid
             for (i = 0; i <= 10; i += 1) {
                 x = graphLeft + (i / 10) * graphWidth;
                 y = graphTop + (i / 10) * graphHeight;
@@ -1029,6 +1057,7 @@
                 g.strokePath(gridPen);
             }
 
+            // Draw axes
             g.newPath();
             g.moveTo(graphLeft, graphTop + graphHeight);
             g.lineTo(graphLeft + graphWidth, graphTop + graphHeight);
@@ -1043,12 +1072,13 @@
                 return;
             }
 
+            // Draw curve using pre-sampled values
             g.newPath();
             for (i = 0; i <= sampleCount; i += 1) {
                 t = i / sampleCount;
-                value = clamp(curve.getValue(t), 0, 1);
+                value = samples[i];
                 curveX = graphLeft + t * graphWidth;
-                curveY = graphTop + (1 - value) * graphHeight;
+                curveY = graphTop + (1 - (value - minValue) / valueRange) * graphHeight;
 
                 if (i === 0) {
                     g.moveTo(curveX, curveY);
@@ -1194,10 +1224,10 @@
             return;
         }
 
-        var message = 'Applied expression to ' + appliedCount + ' propert';
-        message += (appliedCount === 1) ? 'y.' : 'ies.';
-
+        // Only show alert if there were warnings or errors
         if (skipped.length > 0 || errors.length > 0) {
+            var message = 'Applied expression to ' + appliedCount + ' propert';
+            message += (appliedCount === 1) ? 'y.' : 'ies.';
             message += '\n\n';
             if (skipped.length > 0) {
                 message += 'Skipped:\n' + skipped.join('\n');
@@ -1205,9 +1235,8 @@
             if (errors.length > 0) {
                 message += (skipped.length > 0 ? '\n\n' : '') + 'Errors:\n' + errors.join('\n');
             }
+            alert(message);
         }
-
-        alert(message);
     }
 
     // Part 8: Main entry point
