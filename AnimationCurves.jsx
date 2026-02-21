@@ -757,9 +757,9 @@
         tabs.preferredSize = [310, 490];
 
         var riveTab = tabs.add('tab', undefined, 'Rive');
-        var iosTab = tabs.add('tab', undefined, 'iOS');
         var folmeTab = tabs.add('tab', undefined, 'Folme');
         var androidTab = tabs.add('tab', undefined, 'Android');
+        var iosTab = tabs.add('tab', undefined, 'iOS');
 
         var uiByPlatform = {};
         var currentPlatform = 'Rive';
@@ -817,10 +817,10 @@
         function getSelectedCurveDef(platformName) {
             var ui = uiByPlatform[platformName];
             var idx;
-            if (!ui || !ui.dropdown.selection || ui.dropdown.selection.index === 0) {
+            if (!ui || !ui.dropdown.selection) {
                 return null;
             }
-            idx = ui.dropdown.selection.index - 1;
+            idx = ui.dropdown.selection.index;
             return PLATFORM_DATA[platformName].curves[idx];
         }
 
@@ -1040,7 +1040,7 @@
             var curveLabel = curveGroup.add('statictext', undefined, 'Curve');
             curveLabel.alignment = ['left', 'top'];
 
-            var curveItems = ['-- Select Curve --'];
+            var curveItems = [];
             var platformCurves = PLATFORM_DATA[platformName].curves;
             var n;
             for (n = 0; n < platformCurves.length; n += 1) {
@@ -1079,9 +1079,33 @@
         }
 
         buildTabContent(riveTab, 'Rive');
-        buildTabContent(iosTab, 'iOS');
         buildTabContent(folmeTab, 'Folme');
         buildTabContent(androidTab, 'Android');
+        buildTabContent(iosTab, 'iOS');
+
+        // Initialize default curve selections for each platform
+        function initializeDefaultCurve(platformName) {
+            var ui = uiByPlatform[platformName];
+            if (ui && ui.dropdown && ui.dropdown.items.length > 0) {
+                ui.dropdown.selection = 0;
+                var curveDef = getSelectedCurveDef(platformName);
+                if (curveDef) {
+                    viewModel.setPlatform(platformName);
+                    viewModel.setCurveType(curveDef.name);
+                    viewModel.setParams(defaultParamsForCurve(curveDef));
+                    buildParameterControls(platformName);
+                }
+            }
+        }
+
+        initializeDefaultCurve('Rive');
+        initializeDefaultCurve('Folme');
+        initializeDefaultCurve('Android');
+        initializeDefaultCurve('iOS');
+
+        // Set initial preview for Rive (first tab)
+        currentPlatform = 'Rive';
+        updatePreview();
 
         var previewPanel = win.add('panel');
         previewPanel.alignChildren = ['fill', 'top'];
@@ -1097,7 +1121,7 @@
             var bounds = this.bounds;
             var width = bounds.width;
             var height = bounds.height;
-            var margin = 10;
+            var margin = 15;
             var graphLeft = margin;
             var graphTop = margin;
             var graphWidth = width - margin * 2;
@@ -1116,7 +1140,6 @@
             var valueRange;
             var samples = [];
 
-            var gridPen = g.newPen(g.PenType.SOLID_COLOR, [0.3, 0.3, 0.3, 1], 1);
             var curvePen = g.newPen(g.PenType.SOLID_COLOR, [0.3, 0.6, 1.0, 1], 2);
             var bgBrush = g.newBrush(g.BrushType.SOLID_COLOR, [0.15, 0.15, 0.15, 1]);
 
@@ -1148,22 +1171,6 @@
             }
 
             valueRange = maxValue - minValue;
-
-            // Draw grid
-            for (i = 0; i <= 10; i += 1) {
-                x = graphLeft + (i / 10) * graphWidth;
-                y = graphTop + (i / 10) * graphHeight;
-
-                g.newPath();
-                g.moveTo(x, graphTop);
-                g.lineTo(x, graphTop + graphHeight);
-                g.strokePath(gridPen);
-
-                g.newPath();
-                g.moveTo(graphLeft, y);
-                g.lineTo(graphLeft + graphWidth, y);
-                g.strokePath(gridPen);
-            }
 
             if (!curve) {
                 return;
