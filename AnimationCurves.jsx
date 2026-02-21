@@ -1116,12 +1116,18 @@
             var valueRange;
             var samples = [];
 
+            var borderPen = g.newPen(g.PenType.SOLID_COLOR, [0.3, 0.3, 0.3, 1], 1);
             var curvePen = g.newPen(g.PenType.SOLID_COLOR, [0.3, 0.6, 1.0, 1], 2);
             var bgBrush = g.newBrush(g.BrushType.SOLID_COLOR, [0.15, 0.15, 0.15, 1]);
 
             g.newPath();
             g.rectPath(0, 0, width, height);
             g.fillPath(bgBrush);
+
+            // Draw border
+            g.newPath();
+            g.rectPath(graphLeft, graphTop, graphWidth, graphHeight);
+            g.strokePath(borderPen);
 
             // If curve exists, sample all values to find min/max
             if (curve) {
@@ -1223,14 +1229,17 @@
             }
         }
 
+        // Set current platform before initialization
+        currentPlatform = 'Rive';
+
         initializeDefaultCurve('Rive');
         initializeDefaultCurve('Folme');
         initializeDefaultCurve('Android');
         initializeDefaultCurve('iOS');
 
-        // Set initial preview for Rive (first tab)
-        currentPlatform = 'Rive';
+        // Set initial preview and apply for Rive (first tab)
         updatePreview();
+        applyToKeyframesHelper();
 
         win.onResizing = win.onResize = function () {
             this.layout.resize();
