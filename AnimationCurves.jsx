@@ -1086,13 +1086,9 @@
         buildTabContent(androidTab, 'Android');
         buildTabContent(iosTab, 'iOS');
 
-        var previewPanel = win.add('panel');
-        previewPanel.alignChildren = ['fill', 'top'];
-        previewPanel.preferredSize = [310, 110];
-
-        var previewCanvas = previewPanel.add('panel');
+        var previewCanvas = win.add('panel');
         previewCanvas.preferredSize = [310, 110];
-        previewCanvas.alignment = ['fill', 'fill'];
+        previewCanvas.alignment = ['fill', 'top'];
         previewCanvas.previewCurve = null;
 
         previewCanvas.onDraw = function () {
