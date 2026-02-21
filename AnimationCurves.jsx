@@ -49,11 +49,17 @@
         return x;
     };
 
-    function IOSSpringCurve(damping, velocity, duration) {
+    function IOSSpringCurve(damping, velocity) {
         this.damping = (typeof damping === 'number') ? damping : 0.8;
         this.velocity = (typeof velocity === 'number') ? velocity : 0.0;
-        this.duration = (typeof duration === 'number' && duration > 0) ? duration : 1.0;
     }
+
+    IOSSpringCurve.prototype.getSettlingTime = function () {
+        var damping = Math.max(this.damping, 0.0001);
+        var omega = 12;
+        var settlingTime = 4 / (damping * omega);
+        return settlingTime;
+    };
 
     IOSSpringCurve.prototype.getValue = function (t) {
         var clampedT = clamp01(t);
@@ -65,7 +71,7 @@
         }
 
         var damping = Math.max(this.damping, 0.0001);
-        var duration = Math.max(this.duration, 0.0001);
+        var duration = this.getSettlingTime();
         var velocity = this.velocity;
         var tau = clampedT * duration;
         var omega = 12 / duration;
@@ -74,11 +80,10 @@
         return y;
     };
 
-    function IOSSpringDefaultCurve(damping, velocity, duration) {
+    function IOSSpringDefaultCurve(damping, velocity) {
         this.spring = new IOSSpringCurve(
             (typeof damping === 'number') ? damping : 0.8,
-            (typeof velocity === 'number') ? velocity : 0.0,
-            (typeof duration === 'number') ? duration : 1.0
+            (typeof velocity === 'number') ? velocity : 0.0
         );
     }
 
@@ -86,11 +91,10 @@
         return this.spring.getValue(t);
     };
 
-    function IOSSpringGentleCurve(damping, velocity, duration) {
+    function IOSSpringGentleCurve(damping, velocity) {
         this.spring = new IOSSpringCurve(
             (typeof damping === 'number') ? damping : 0.9,
-            (typeof velocity === 'number') ? velocity : 0.0,
-            (typeof duration === 'number') ? duration : 1.0
+            (typeof velocity === 'number') ? velocity : 0.0
         );
     }
 
@@ -98,11 +102,10 @@
         return this.spring.getValue(t);
     };
 
-    function IOSSpringBouncyCurve(damping, velocity, duration) {
+    function IOSSpringBouncyCurve(damping, velocity) {
         this.spring = new IOSSpringCurve(
             (typeof damping === 'number') ? damping : 0.5,
-            (typeof velocity === 'number') ? velocity : 0.0,
-            (typeof duration === 'number') ? duration : 1.0
+            (typeof velocity === 'number') ? velocity : 0.0
         );
     }
 
@@ -110,11 +113,10 @@
         return this.spring.getValue(t);
     };
 
-    function IOSSpringCustomCurve(damping, velocity, duration) {
+    function IOSSpringCustomCurve(damping, velocity) {
         this.spring = new IOSSpringCurve(
             (typeof damping === 'number') ? damping : 0.7,
-            (typeof velocity === 'number') ? velocity : 0.0,
-            (typeof duration === 'number') ? duration : 1.0
+            (typeof velocity === 'number') ? velocity : 0.0
         );
     }
 
@@ -122,11 +124,18 @@
         return this.spring.getValue(t);
     };
 
-    function FolmeSpringCurve(damping, response, duration) {
+    function FolmeSpringCurve(damping, response) {
         this.damping = (typeof damping === 'number') ? damping : 0.9;
         this.response = (typeof response === 'number' && response > 0) ? response : 0.3;
-        this.duration = (typeof duration === 'number' && duration > 0) ? duration : 0.5;
     }
+
+    FolmeSpringCurve.prototype.getSettlingTime = function () {
+        var damping = Math.max(this.damping, 0.0001);
+        var response = Math.max(this.response, 0.0001);
+        var omega = 2 * Math.PI / response;
+        var settlingTime = 4 / (damping * omega);
+        return settlingTime;
+    };
 
     FolmeSpringCurve.prototype.getValue = function (t) {
         var clampedT = clamp01(t);
@@ -139,7 +148,7 @@
 
         var damping = Math.max(this.damping, 0.0001);
         var response = Math.max(this.response, 0.0001);
-        var duration = Math.max(this.duration, 0.0001);
+        var duration = this.getSettlingTime();
 
         var mass = 1;
         var tension = Math.pow(2 * Math.PI / response, 2) * mass;
@@ -341,10 +350,11 @@
         );
     };
 
-    ExpressionGenerator.prototype._buildIOSSpringCode = function (damping, velocity, duration) {
+    ExpressionGenerator.prototype._buildIOSSpringCode = function (damping, velocity) {
         return "    var damping = " + damping + ";\n" +
             "    var velocity = " + velocity + ";\n" +
-            "    var springDuration = " + duration + ";\n" +
+            "    var settlingTime = 4 / (Math.max(damping, 0.0001) * 12);\n" +
+            "    var springDuration = settlingTime;\n" +
             "    if (t === 0) {\n" +
             "      val = 0;\n" +
             "    } else if (t === 1) {\n" +
@@ -360,63 +370,65 @@
     ExpressionGenerator.prototype._buildIOSSpringDefault = function (params) {
         var damping = (params.damping !== undefined) ? params.damping : 0.8;
         var velocity = (params.velocity !== undefined) ? params.velocity : 0.0;
-        var duration = (params.duration !== undefined) ? params.duration : 1.0;
-        var curveCode = this._buildIOSSpringCode(damping, velocity, duration);
+        var settlingTime = 4 / (Math.max(damping, 0.0001) * 12);
+        var curveCode = this._buildIOSSpringCode(damping, velocity);
 
         return this._composeExpression(
             'iOS - Spring Default',
-            'damping=' + damping + ', velocity=' + velocity + ', duration=' + duration,
+            'damping=' + damping + ', velocity=' + velocity,
             curveCode,
-            { usePhysicalDuration: true, duration: duration }
+            { usePhysicalDuration: true, duration: settlingTime }
         );
     };
 
     ExpressionGenerator.prototype._buildIOSSpringGentle = function (params) {
         var damping = (params.damping !== undefined) ? params.damping : 0.9;
         var velocity = (params.velocity !== undefined) ? params.velocity : 0.0;
-        var duration = (params.duration !== undefined) ? params.duration : 1.0;
-        var curveCode = this._buildIOSSpringCode(damping, velocity, duration);
+        var settlingTime = 4 / (Math.max(damping, 0.0001) * 12);
+        var curveCode = this._buildIOSSpringCode(damping, velocity);
 
         return this._composeExpression(
             'iOS - Spring Gentle',
-            'damping=' + damping + ', velocity=' + velocity + ', duration=' + duration,
+            'damping=' + damping + ', velocity=' + velocity,
             curveCode,
-            { usePhysicalDuration: true, duration: duration }
+            { usePhysicalDuration: true, duration: settlingTime }
         );
     };
 
     ExpressionGenerator.prototype._buildIOSSpringBouncy = function (params) {
         var damping = (params.damping !== undefined) ? params.damping : 0.5;
         var velocity = (params.velocity !== undefined) ? params.velocity : 0.0;
-        var duration = (params.duration !== undefined) ? params.duration : 1.0;
-        var curveCode = this._buildIOSSpringCode(damping, velocity, duration);
+        var settlingTime = 4 / (Math.max(damping, 0.0001) * 12);
+        var curveCode = this._buildIOSSpringCode(damping, velocity);
 
         return this._composeExpression(
             'iOS - Spring Bouncy',
-            'damping=' + damping + ', velocity=' + velocity + ', duration=' + duration,
+            'damping=' + damping + ', velocity=' + velocity,
             curveCode,
-            { usePhysicalDuration: true, duration: duration }
+            { usePhysicalDuration: true, duration: settlingTime }
         );
     };
 
     ExpressionGenerator.prototype._buildIOSSpringCustom = function (params) {
         var damping = (params.damping !== undefined) ? params.damping : 0.7;
         var velocity = (params.velocity !== undefined) ? params.velocity : 0.0;
-        var duration = (params.duration !== undefined) ? params.duration : 1.0;
-        var curveCode = this._buildIOSSpringCode(damping, velocity, duration);
+        var settlingTime = 4 / (Math.max(damping, 0.0001) * 12);
+        var curveCode = this._buildIOSSpringCode(damping, velocity);
 
         return this._composeExpression(
             'iOS - Spring Custom',
-            'damping=' + damping + ', velocity=' + velocity + ', duration=' + duration,
+            'damping=' + damping + ', velocity=' + velocity,
             curveCode,
-            { usePhysicalDuration: true, duration: duration }
+            { usePhysicalDuration: true, duration: settlingTime }
         );
     };
 
-    ExpressionGenerator.prototype._buildFolmeSpringCode = function (damping, response, duration) {
+    ExpressionGenerator.prototype._buildFolmeSpringCode = function (damping, response) {
         return "    var damping = " + damping + ";\n" +
             "    var response = " + response + ";\n" +
-            "    var springDuration = " + duration + ";\n" +
+            "    var omega = 2 * Math.PI / Math.max(response, 0.0001);\n" +
+            "    var settlingTime = 4 / (Math.max(damping, 0.0001) * omega);\n" +
+            "    var springDuration = settlingTime;\n" +
             "    if (t === 0) {\n" +
             "      val = 0;\n" +
             "    } else if (t === 1) {\n" +
@@ -446,14 +458,15 @@
     ExpressionGenerator.prototype._buildFolmeSpring = function (params) {
         var damping = (params.damping !== undefined) ? params.damping : 0.9;
         var response = (params.response !== undefined) ? params.response : 0.3;
-        var duration = (params.duration !== undefined) ? params.duration : 0.5;
-        var curveCode = this._buildFolmeSpringCode(damping, response, duration);
+        var omega = 2 * Math.PI / Math.max(response, 0.0001);
+        var settlingTime = 4 / (Math.max(damping, 0.0001) * omega);
+        var curveCode = this._buildFolmeSpringCode(damping, response);
 
         return this._composeExpression(
             'Folme - Spring',
-            'damping=' + damping + ', response=' + response + ', duration=' + duration,
+            'damping=' + damping + ', response=' + response,
             curveCode,
-            { usePhysicalDuration: true, duration: duration }
+            { usePhysicalDuration: true, duration: settlingTime }
         );
     };
 
@@ -616,29 +629,25 @@
             if (t === 'spring default') {
                 return new IOSSpringDefaultCurve(
                     ensureNumber(cfg.damping, 'damping', 0.8),
-                    ensureNumber(cfg.velocity, 'velocity', 0.0),
-                    ensurePositiveNumber(cfg.duration, 'duration', 1.0)
+                    ensureNumber(cfg.velocity, 'velocity', 0.0)
                 );
             }
             if (t === 'spring gentle') {
                 return new IOSSpringGentleCurve(
                     ensureNumber(cfg.damping, 'damping', 0.9),
-                    ensureNumber(cfg.velocity, 'velocity', 0.0),
-                    ensurePositiveNumber(cfg.duration, 'duration', 1.0)
+                    ensureNumber(cfg.velocity, 'velocity', 0.0)
                 );
             }
             if (t === 'spring bouncy') {
                 return new IOSSpringBouncyCurve(
                     ensureNumber(cfg.damping, 'damping', 0.5),
-                    ensureNumber(cfg.velocity, 'velocity', 0.0),
-                    ensurePositiveNumber(cfg.duration, 'duration', 1.0)
+                    ensureNumber(cfg.velocity, 'velocity', 0.0)
                 );
             }
             if (t === 'spring custom') {
                 return new IOSSpringCustomCurve(
                     ensureNumber(cfg.damping, 'damping', 0.7),
-                    ensureNumber(cfg.velocity, 'velocity', 0.0),
-                    ensurePositiveNumber(cfg.duration, 'duration', 1.0)
+                    ensureNumber(cfg.velocity, 'velocity', 0.0)
                 );
             }
             throw new Error('Unsupported iOS curve: ' + type);
@@ -648,8 +657,7 @@
             if (t === 'spring') {
                 return new FolmeSpringCurve(
                     ensureNumber(cfg.damping, 'damping', 0.9),
-                    ensurePositiveNumber(cfg.response, 'response', 0.3),
-                    ensurePositiveNumber(cfg.duration, 'duration', 0.5)
+                    ensurePositiveNumber(cfg.response, 'response', 0.3)
                 );
             }
             throw new Error('Unsupported Folme curve: ' + type);
@@ -689,32 +697,28 @@
                     name: 'Spring Default',
                     params: [
                         { key: 'damping', label: 'Damping', type: 'slider', min: 0.1, max: 1.0, step: 0.01, defaultValue: 0.7 },
-                        { key: 'velocity', label: 'Velocity', type: 'slider', min: 0.0, max: 3.0, step: 0.01, defaultValue: 0.0 },
-                        { key: 'duration', label: 'Duration', type: 'slider', min: 0.1, max: 2.0, step: 0.01, defaultValue: 0.5 }
+                        { key: 'velocity', label: 'Velocity', type: 'slider', min: 0.0, max: 3.0, step: 0.01, defaultValue: 0.0 }
                     ]
                 },
                 {
                     name: 'Spring Gentle',
                     params: [
                         { key: 'damping', label: 'Damping', type: 'slider', min: 0.1, max: 1.0, step: 0.01, defaultValue: 0.9 },
-                        { key: 'velocity', label: 'Velocity', type: 'slider', min: 0.0, max: 3.0, step: 0.01, defaultValue: 0.0 },
-                        { key: 'duration', label: 'Duration', type: 'slider', min: 0.1, max: 2.0, step: 0.01, defaultValue: 0.6 }
+                        { key: 'velocity', label: 'Velocity', type: 'slider', min: 0.0, max: 3.0, step: 0.01, defaultValue: 0.0 }
                     ]
                 },
                 {
                     name: 'Spring Bouncy',
                     params: [
                         { key: 'damping', label: 'Damping', type: 'slider', min: 0.1, max: 1.0, step: 0.01, defaultValue: 0.5 },
-                        { key: 'velocity', label: 'Velocity', type: 'slider', min: 0.0, max: 3.0, step: 0.01, defaultValue: 0.2 },
-                        { key: 'duration', label: 'Duration', type: 'slider', min: 0.1, max: 2.0, step: 0.01, defaultValue: 0.7 }
+                        { key: 'velocity', label: 'Velocity', type: 'slider', min: 0.0, max: 3.0, step: 0.01, defaultValue: 0.2 }
                     ]
                 },
                 {
                     name: 'Spring Custom',
                     params: [
                         { key: 'damping', label: 'Damping', type: 'slider', min: 0.1, max: 1.0, step: 0.01, defaultValue: 0.8 },
-                        { key: 'velocity', label: 'Velocity', type: 'slider', min: 0.0, max: 3.0, step: 0.01, defaultValue: 0.0 },
-                        { key: 'duration', label: 'Duration', type: 'slider', min: 0.1, max: 2.0, step: 0.01, defaultValue: 0.5 }
+                        { key: 'velocity', label: 'Velocity', type: 'slider', min: 0.0, max: 3.0, step: 0.01, defaultValue: 0.0 }
                     ]
                 }
             ]
@@ -725,8 +729,7 @@
                     name: 'Spring',
                     params: [
                         { key: 'damping', label: 'Damping', type: 'slider', min: 0.1, max: 1.0, step: 0.01, defaultValue: 0.9 },
-                        { key: 'response', label: 'Response', type: 'slider', min: 0.1, max: 1.0, step: 0.01, defaultValue: 0.3 },
-                        { key: 'duration', label: 'Duration', type: 'slider', min: 0.1, max: 2.0, step: 0.01, defaultValue: 0.5 }
+                        { key: 'response', label: 'Response', type: 'slider', min: 0.1, max: 1.0, step: 0.01, defaultValue: 0.3 }
                     ]
                 }
             ]
