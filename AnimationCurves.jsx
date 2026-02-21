@@ -122,6 +122,49 @@
         return this.spring.getValue(t);
     };
 
+    function FolmeSpringCurve(damping, response, duration) {
+        this.damping = (typeof damping === 'number') ? damping : 0.9;
+        this.response = (typeof response === 'number' && response > 0) ? response : 0.3;
+        this.duration = (typeof duration === 'number' && duration > 0) ? duration : 0.5;
+    }
+
+    FolmeSpringCurve.prototype.getValue = function (t) {
+        var clampedT = clamp01(t);
+        if (clampedT === 0) {
+            return 0;
+        }
+        if (clampedT === 1) {
+            return 1;
+        }
+
+        var damping = Math.max(this.damping, 0.0001);
+        var response = Math.max(this.response, 0.0001);
+        var duration = Math.max(this.duration, 0.0001);
+
+        var mass = 1;
+        var tension = Math.pow(2 * Math.PI / response, 2) * mass;
+        var dampingCoeff = 4 * Math.PI * damping * mass / response;
+        dampingCoeff = Math.min(dampingCoeff, 60);
+
+        var physicsTime = clampedT * duration;
+        var dt = 0.001;
+        var steps = Math.floor(physicsTime / dt);
+        var value = 0;
+        var speed = 0;
+        var target = 1;
+        var i;
+
+        for (i = 0; i < steps; i += 1) {
+            var f = 0;
+            f -= speed * dampingCoeff;
+            f += (tension * (target - value));
+            speed += f * dt;
+            value += speed * dt;
+        }
+
+        return value;
+    };
+
     function AndroidSpringCurve(tension, friction) {
         this.tension = (typeof tension === 'number' && tension > 0) ? tension : 160.0;
         this.friction = (typeof friction === 'number' && friction >= 0) ? friction : 18.0;
@@ -180,6 +223,9 @@
                 "spring gentle": this._buildIOSSpringGentle,
                 "spring bouncy": this._buildIOSSpringBouncy,
                 "spring custom": this._buildIOSSpringCustom
+            },
+            folme: {
+                spring: this._buildFolmeSpring
             },
             android: {
                 spring: this._buildAndroidSpring
@@ -362,6 +408,50 @@
         return this._composeExpression(
             'iOS - Spring Custom',
             'damping=' + damping + ', velocity=' + velocity + ', duration=' + duration,
+            curveCode,
+            { usePhysicalDuration: true, duration: duration }
+        );
+    };
+
+    ExpressionGenerator.prototype._buildFolmeSpringCode = function (damping, response, duration) {
+        return "    var damping = " + damping + ";\n" +
+            "    var response = " + response + ";\n" +
+            "    var springDuration = " + duration + ";\n" +
+            "    if (t === 0) {\n" +
+            "      val = 0;\n" +
+            "    } else if (t === 1) {\n" +
+            "      val = 1;\n" +
+            "    } else {\n" +
+            "      var mass = 1;\n" +
+            "      var tension = Math.pow(2 * Math.PI / response, 2) * mass;\n" +
+            "      var dampingCoeff = 4 * Math.PI * damping * mass / response;\n" +
+            "      dampingCoeff = Math.min(dampingCoeff, 60);\n" +
+            "      var physicsTime = t * springDuration;\n" +
+            "      var dt = 0.001;\n" +
+            "      var steps = Math.floor(physicsTime / dt);\n" +
+            "      var value = 0;\n" +
+            "      var speed = 0;\n" +
+            "      var target = 1;\n" +
+            "      for (var i = 0; i < steps; i++) {\n" +
+            "        var f = 0;\n" +
+            "        f -= speed * dampingCoeff;\n" +
+            "        f += (tension * (target - value));\n" +
+            "        speed += f * dt;\n" +
+            "        value += speed * dt;\n" +
+            "      }\n" +
+            "      val = value;\n" +
+            "    }\n";
+    };
+
+    ExpressionGenerator.prototype._buildFolmeSpring = function (params) {
+        var damping = (params.damping !== undefined) ? params.damping : 0.9;
+        var response = (params.response !== undefined) ? params.response : 0.3;
+        var duration = (params.duration !== undefined) ? params.duration : 0.5;
+        var curveCode = this._buildFolmeSpringCode(damping, response, duration);
+
+        return this._composeExpression(
+            'Folme - Spring',
+            'damping=' + damping + ', response=' + response + ', duration=' + duration,
             curveCode,
             { usePhysicalDuration: true, duration: duration }
         );
@@ -554,6 +644,17 @@
             throw new Error('Unsupported iOS curve: ' + type);
         }
 
+        if (p === 'folme') {
+            if (t === 'spring') {
+                return new FolmeSpringCurve(
+                    ensureNumber(cfg.damping, 'damping', 0.9),
+                    ensurePositiveNumber(cfg.response, 'response', 0.3),
+                    ensurePositiveNumber(cfg.duration, 'duration', 0.5)
+                );
+            }
+            throw new Error('Unsupported Folme curve: ' + type);
+        }
+
         if (p === 'android') {
             if (t === 'spring') {
                 return new AndroidSpringCurve(
@@ -618,6 +719,18 @@
                 }
             ]
         },
+        Folme: {
+            curves: [
+                {
+                    name: 'Spring',
+                    params: [
+                        { key: 'damping', label: 'Damping', type: 'slider', min: 0.1, max: 1.0, step: 0.01, defaultValue: 0.9 },
+                        { key: 'response', label: 'Response', type: 'slider', min: 0.1, max: 1.0, step: 0.01, defaultValue: 0.3 },
+                        { key: 'duration', label: 'Duration', type: 'slider', min: 0.1, max: 2.0, step: 0.01, defaultValue: 0.5 }
+                    ]
+                }
+            ]
+        },
         Android: {
             curves: [
                 {
@@ -645,6 +758,7 @@
 
         var riveTab = tabs.add('tab', undefined, 'Rive');
         var iosTab = tabs.add('tab', undefined, 'iOS');
+        var folmeTab = tabs.add('tab', undefined, 'Folme');
         var androidTab = tabs.add('tab', undefined, 'Android');
 
         var uiByPlatform = {};
@@ -969,6 +1083,7 @@
 
         buildTabContent(riveTab, 'Rive');
         buildTabContent(iosTab, 'iOS');
+        buildTabContent(folmeTab, 'Folme');
         buildTabContent(androidTab, 'Android');
 
         var previewPanel = win.add('panel', undefined, 'Curve Preview');
@@ -1008,10 +1123,10 @@
             var valueRange;
             var samples = [];
 
-            var gridPen = g.newPen(g.PenType.SOLID_COLOR, [0.78, 0.78, 0.78, 1], 1);
-            var axisPen = g.newPen(g.PenType.SOLID_COLOR, [0.0, 0.0, 0.0, 1], 1.5);
-            var curvePen = g.newPen(g.PenType.SOLID_COLOR, [0.12, 0.45, 0.86, 1], 2);
-            var bgBrush = g.newBrush(g.BrushType.SOLID_COLOR, [1, 1, 1, 1]);
+            var gridPen = g.newPen(g.PenType.SOLID_COLOR, [0.3, 0.3, 0.3, 1], 1);
+            var axisPen = g.newPen(g.PenType.SOLID_COLOR, [0.8, 0.8, 0.8, 1], 1.5);
+            var curvePen = g.newPen(g.PenType.SOLID_COLOR, [0.3, 0.6, 1.0, 1], 2);
+            var bgBrush = g.newBrush(g.BrushType.SOLID_COLOR, [0.15, 0.15, 0.15, 1]);
 
             g.newPath();
             g.rectPath(0, 0, width, height);
@@ -1245,6 +1360,9 @@
         var p = String(platform || '').toLowerCase();
         if (p === 'ios') {
             return 'ios';
+        }
+        if (p === 'folme') {
+            return 'folme';
         }
         if (p === 'android') {
             return 'android';
