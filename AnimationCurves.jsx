@@ -1083,30 +1083,6 @@
         buildTabContent(androidTab, 'Android');
         buildTabContent(iosTab, 'iOS');
 
-        // Initialize default curve selections for each platform
-        function initializeDefaultCurve(platformName) {
-            var ui = uiByPlatform[platformName];
-            if (ui && ui.dropdown && ui.dropdown.items.length > 0) {
-                ui.dropdown.selection = 0;
-                var curveDef = getSelectedCurveDef(platformName);
-                if (curveDef) {
-                    viewModel.setPlatform(platformName);
-                    viewModel.setCurveType(curveDef.name);
-                    viewModel.setParams(defaultParamsForCurve(curveDef));
-                    buildParameterControls(platformName);
-                }
-            }
-        }
-
-        initializeDefaultCurve('Rive');
-        initializeDefaultCurve('Folme');
-        initializeDefaultCurve('Android');
-        initializeDefaultCurve('iOS');
-
-        // Set initial preview for Rive (first tab)
-        currentPlatform = 'Rive';
-        updatePreview();
-
         var previewPanel = win.add('panel');
         previewPanel.alignChildren = ['fill', 'top'];
         previewPanel.preferredSize = [310, 120];
@@ -1232,9 +1208,29 @@
             updatePreview();
         };
 
-        viewModel.setPlatform('Rive');
-        uiByPlatform.Rive.dropdown.selection = 1;
-        uiByPlatform.Rive.dropdown.notify('onChange');
+        // Initialize default curve selections for each platform
+        function initializeDefaultCurve(platformName) {
+            var ui = uiByPlatform[platformName];
+            if (ui && ui.dropdown && ui.dropdown.items.length > 0) {
+                ui.dropdown.selection = 0;
+                var curveDef = getSelectedCurveDef(platformName);
+                if (curveDef) {
+                    viewModel.setPlatform(platformName);
+                    viewModel.setCurveType(curveDef.name);
+                    viewModel.setParams(defaultParamsForCurve(curveDef));
+                    buildParameterControls(platformName);
+                }
+            }
+        }
+
+        initializeDefaultCurve('Rive');
+        initializeDefaultCurve('Folme');
+        initializeDefaultCurve('Android');
+        initializeDefaultCurve('iOS');
+
+        // Set initial preview for Rive (first tab)
+        currentPlatform = 'Rive';
+        updatePreview();
 
         win.onResizing = win.onResize = function () {
             this.layout.resize();
