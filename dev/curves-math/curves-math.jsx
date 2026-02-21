@@ -480,11 +480,10 @@ IOSSpringCurve.prototype.getValue = function(t) {
     var damping = Math.max(this.damping, 0.0001);
     var duration = Math.max(this.duration, 0.0001);
     var velocity = this.velocity;
-    var omega = Math.PI / duration;
-    var decay = Math.exp(-damping * 6.0 * clampedT);
-    var phase = clampedT * omega;
-    var velocityTerm = velocity * 0.2;
-    var y = 1.0 - decay * (Math.cos(phase) + velocityTerm * Math.sin(phase));
+    var tau = clampedT * duration;
+    var omega = 12 / duration;
+    var envelope = Math.exp(-damping * 8 * tau);
+    var y = 1.0 - envelope * (Math.cos(omega * tau) + (velocity / Math.max(omega, 0.0001)) * Math.sin(omega * tau));
     return clamp01(y);
 };
 
