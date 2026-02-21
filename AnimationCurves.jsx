@@ -750,7 +750,7 @@
         win.alignChildren = ['fill', 'top'];
         win.spacing = 8;
         win.margins = 10;
-        win.preferredSize = [330, 690];
+        win.preferredSize = [330, 650];
 
         var tabs = win.add('tabbedpanel');
         tabs.alignChildren = ['fill', 'top'];
@@ -837,18 +837,11 @@
         function updatePreview() {
             var curveDef = getSelectedCurveDef(currentPlatform);
             var curve = null;
-            var errorMessage = '';
 
             try {
                 curve = createPreviewCurve();
             } catch (err) {
-                errorMessage = String(err);
-            }
-
-            if (!curve) {
-                previewStatus.text = errorMessage ? ('Preview unavailable: ' + errorMessage) : 'Select a curve to preview.';
-            } else {
-                previewStatus.text = currentPlatform + ' - ' + curveDef.name;
+                // Silently handle errors
             }
 
             previewCanvas.previewCurve = curve;
@@ -956,6 +949,7 @@
                                 viewModel.setParam(p.key, s.selection.text);
                             }
                             updatePreview();
+                            applyToKeyframesHelper();
                         };
                     }(param, select));
 
@@ -1004,6 +998,7 @@
                             viewModel.setParam(p.key, parseFloat(formatNumber(v, d)));
                             e.text = formatNumber(v, d);
                             updatePreview();
+                            applyToKeyframesHelper();
                         };
                     }(param, slider, input, stepDecimals));
 
@@ -1020,6 +1015,7 @@
                             e.text = formatNumber(v, d);
                             viewModel.setParam(p.key, parseFloat(formatNumber(v, d)));
                             updatePreview();
+                            applyToKeyframesHelper();
                         };
                     }(param, slider, input, stepDecimals));
 
@@ -1071,6 +1067,7 @@
                 buildParameterControls(platformName);
                 if (platformName === currentPlatform) {
                     updatePreview();
+                    applyToKeyframesHelper();
                 }
             };
 
@@ -1086,18 +1083,14 @@
         buildTabContent(folmeTab, 'Folme');
         buildTabContent(androidTab, 'Android');
 
-        var previewPanel = win.add('panel', undefined, 'Curve Preview');
+        var previewPanel = win.add('panel');
         previewPanel.alignChildren = ['fill', 'top'];
-        previewPanel.preferredSize = [310, 150];
+        previewPanel.preferredSize = [310, 120];
 
         var previewCanvas = previewPanel.add('panel');
-        previewCanvas.preferredSize = [280, 110];
+        previewCanvas.preferredSize = [310, 110];
         previewCanvas.alignment = ['center', 'top'];
         previewCanvas.previewCurve = null;
-
-        var previewStatus = previewPanel.add('statictext', undefined, 'Select a curve to preview.');
-        previewStatus.alignment = ['left', 'top'];
-        previewStatus.preferredSize = [290, 18];
 
         previewCanvas.onDraw = function () {
             var g = this.graphics;
@@ -1124,7 +1117,6 @@
             var samples = [];
 
             var gridPen = g.newPen(g.PenType.SOLID_COLOR, [0.3, 0.3, 0.3, 1], 1);
-            var axisPen = g.newPen(g.PenType.SOLID_COLOR, [0.8, 0.8, 0.8, 1], 1.5);
             var curvePen = g.newPen(g.PenType.SOLID_COLOR, [0.3, 0.6, 1.0, 1], 2);
             var bgBrush = g.newBrush(g.BrushType.SOLID_COLOR, [0.15, 0.15, 0.15, 1]);
 
@@ -1173,17 +1165,6 @@
                 g.strokePath(gridPen);
             }
 
-            // Draw axes
-            g.newPath();
-            g.moveTo(graphLeft, graphTop + graphHeight);
-            g.lineTo(graphLeft + graphWidth, graphTop + graphHeight);
-            g.strokePath(axisPen);
-
-            g.newPath();
-            g.moveTo(graphLeft, graphTop + graphHeight);
-            g.lineTo(graphLeft, graphTop);
-            g.strokePath(axisPen);
-
             if (!curve) {
                 return;
             }
@@ -1205,35 +1186,18 @@
             g.strokePath(curvePen);
         };
 
-        var applyButton = win.add('button', undefined, 'Apply to Selected Keyframes');
-        applyButton.preferredSize = [310, 32];
-
-        tabs.selection = riveTab;
-
-        tabs.onChange = function () {
-            if (!tabs.selection) {
-                return;
-            }
-            currentPlatform = tabs.selection.text;
-            updatePreview();
-            refreshLayout();
-        };
-
-        applyButton.onClick = function () {
-            // Detect current active tab
+        function applyToKeyframesHelper() {
             var activePlatform = currentPlatform;
             var ui = uiByPlatform[activePlatform];
 
             // Check if a curve is selected
             if (!ui || !ui.dropdown.selection || ui.dropdown.selection.index === 0) {
-                alert('Please select a curve from the ' + activePlatform + ' tab before applying.');
                 return;
             }
 
             // Get the selected curve definition
             var curveDef = getSelectedCurveDef(activePlatform);
             if (!curveDef) {
-                alert('No curve selected. Please select a curve first.');
                 return;
             }
 
@@ -1243,6 +1207,18 @@
 
             // Apply to keyframes
             applyToKeyframes(viewModel);
+        }
+
+        tabs.selection = riveTab;
+
+        tabs.onChange = function () {
+            if (!tabs.selection) {
+                return;
+            }
+            currentPlatform = tabs.selection.text;
+            updatePreview();
+            applyToKeyframesHelper();
+            refreshLayout();
         };
 
         viewModel.onStateChanged = function () {
@@ -1273,26 +1249,22 @@
         var errors = [];
 
         if (!app || !app.project) {
-            alert('No active project found. Open an After Effects project first.');
             return;
         }
 
         comp = app.project.activeItem;
         if (!comp || !(comp instanceof CompItem)) {
-            alert('Please select an active composition before applying curves.');
             return;
         }
 
         selectedProps = comp.selectedProperties;
         if (!selectedProps || selectedProps.length === 0) {
-            alert('Please select at least one animated property.');
             return;
         }
 
         try {
             expression = viewModel.generateExpression();
         } catch (generateErr) {
-            alert('Unable to generate expression: ' + generateErr.toString());
             return;
         }
 
@@ -1328,31 +1300,7 @@
             app.endUndoGroup();
         }
 
-        if (appliedCount === 0) {
-            var failMessage = 'No expressions were applied.\n';
-            if (skipped.length > 0) {
-                failMessage += '\nSkipped:\n' + skipped.join('\n');
-            }
-            if (errors.length > 0) {
-                failMessage += '\n\nErrors:\n' + errors.join('\n');
-            }
-            alert(failMessage);
-            return;
-        }
-
-        // Only show alert if there were warnings or errors
-        if (skipped.length > 0 || errors.length > 0) {
-            var message = 'Applied expression to ' + appliedCount + ' propert';
-            message += (appliedCount === 1) ? 'y.' : 'ies.';
-            message += '\n\n';
-            if (skipped.length > 0) {
-                message += 'Skipped:\n' + skipped.join('\n');
-            }
-            if (errors.length > 0) {
-                message += (skipped.length > 0 ? '\n\n' : '') + 'Errors:\n' + errors.join('\n');
-            }
-            alert(message);
-        }
+        // Silent operation - no alerts for auto-apply
     }
 
     // Part 8: Main entry point
