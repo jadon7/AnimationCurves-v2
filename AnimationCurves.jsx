@@ -1121,7 +1121,7 @@
 
             var borderPen = g.newPen(g.PenType.SOLID_COLOR, [0.3, 0.3, 0.3, 1], 1);
             var curvePen = g.newPen(g.PenType.SOLID_COLOR, [0.3, 0.6, 1.0, 1], 2);
-            var bgBrush = g.newBrush(g.BrushType.SOLID_COLOR, [0.15, 0.15, 0.15, 1]);
+            var bgBrush = g.newBrush(g.BrushType.SOLID_COLOR, [0.08, 0.08, 0.08, 1]);
 
             g.newPath();
             g.rectPath(0, 0, width, height);
