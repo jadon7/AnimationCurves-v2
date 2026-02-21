@@ -738,7 +738,7 @@
             }
 
             previewCanvas.previewCurve = curve;
-            previewCanvas.notify('onDraw');
+            previewCanvas.update();
         }
 
         function clearParamControls(ui) {
