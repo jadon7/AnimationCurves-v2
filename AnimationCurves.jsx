@@ -54,13 +54,6 @@
         this.velocity = (typeof velocity === 'number') ? velocity : 0.0;
     }
 
-    IOSSpringCurve.prototype.getSettlingTime = function () {
-        var damping = Math.max(this.damping, 0.0001);
-        var omega = 12;
-        var settlingTime = 4 / (damping * omega);
-        return settlingTime;
-    };
-
     IOSSpringCurve.prototype.getValue = function (t) {
         var clampedT = clamp01(t);
         if (clampedT === 0) {
@@ -71,12 +64,12 @@
         }
 
         var damping = Math.max(this.damping, 0.0001);
-        var duration = this.getSettlingTime();
+        var referenceDuration = 1.0; // Fixed 1 second reference time
         var velocity = this.velocity;
-        var tau = clampedT * duration;
-        var omega = 12 / duration;
-        var envelope = Math.exp(-damping * 8 * tau);
-        var y = 1.0 - envelope * (Math.cos(omega * tau) + (velocity / Math.max(omega, 0.0001)) * Math.sin(omega * tau));
+        var omega = 12; // Fixed angular frequency (rad/s)
+        var tau = clampedT * referenceDuration;
+        var envelope = Math.exp(-damping * omega * tau);
+        var y = 1.0 - envelope * (Math.cos(omega * tau) + (velocity / omega) * Math.sin(omega * tau));
         return y;
     };
 
@@ -377,31 +370,29 @@
     ExpressionGenerator.prototype._buildIOSSpringCode = function (damping, velocity) {
         return "    var damping = " + damping + ";\n" +
             "    var velocity = " + velocity + ";\n" +
-            "    var settlingTime = 4 / (Math.max(damping, 0.0001) * 12);\n" +
-            "    var springDuration = settlingTime;\n" +
+            "    var referenceDuration = 1.0;\n" +
+            "    var omega = 12;\n" +
             "    if (t === 0) {\n" +
             "      val = 0;\n" +
             "    } else if (t === 1) {\n" +
             "      val = 1;\n" +
             "    } else {\n" +
-            "      var tau = t * springDuration;\n" +
-            "      var omega = 12 / Math.max(springDuration, 0.0001);\n" +
-            "      var envelope = Math.exp(-damping * 8 * tau);\n" +
-            "      val = 1 - envelope * (Math.cos(omega * tau) + (velocity / Math.max(omega, 0.0001)) * Math.sin(omega * tau));\n" +
+            "      var tau = t * referenceDuration;\n" +
+            "      var envelope = Math.exp(-damping * omega * tau);\n" +
+            "      val = 1 - envelope * (Math.cos(omega * tau) + (velocity / omega) * Math.sin(omega * tau));\n" +
             "    }\n";
     };
 
     ExpressionGenerator.prototype._buildIOSSpringDefault = function (params, selectedKeyIndices) {
         var damping = (params.damping !== undefined) ? params.damping : 0.8;
         var velocity = (params.velocity !== undefined) ? params.velocity : 0.0;
-        var settlingTime = 4 / (Math.max(damping, 0.0001) * 12);
         var curveCode = this._buildIOSSpringCode(damping, velocity);
 
         return this._composeExpression(
             'iOS - Spring Default',
             'damping=' + damping + ', velocity=' + velocity,
             curveCode,
-            { usePhysicalDuration: true, duration: settlingTime },
+            { usePhysicalDuration: true, duration: 1.0 },
             selectedKeyIndices
         );
     };
@@ -409,14 +400,13 @@
     ExpressionGenerator.prototype._buildIOSSpringGentle = function (params, selectedKeyIndices) {
         var damping = (params.damping !== undefined) ? params.damping : 0.9;
         var velocity = (params.velocity !== undefined) ? params.velocity : 0.0;
-        var settlingTime = 4 / (Math.max(damping, 0.0001) * 12);
         var curveCode = this._buildIOSSpringCode(damping, velocity);
 
         return this._composeExpression(
             'iOS - Spring Gentle',
             'damping=' + damping + ', velocity=' + velocity,
             curveCode,
-            { usePhysicalDuration: true, duration: settlingTime },
+            { usePhysicalDuration: true, duration: 1.0 },
             selectedKeyIndices
         );
     };
@@ -424,14 +414,13 @@
     ExpressionGenerator.prototype._buildIOSSpringBouncy = function (params, selectedKeyIndices) {
         var damping = (params.damping !== undefined) ? params.damping : 0.5;
         var velocity = (params.velocity !== undefined) ? params.velocity : 0.0;
-        var settlingTime = 4 / (Math.max(damping, 0.0001) * 12);
         var curveCode = this._buildIOSSpringCode(damping, velocity);
 
         return this._composeExpression(
             'iOS - Spring Bouncy',
             'damping=' + damping + ', velocity=' + velocity,
             curveCode,
-            { usePhysicalDuration: true, duration: settlingTime },
+            { usePhysicalDuration: true, duration: 1.0 },
             selectedKeyIndices
         );
     };
@@ -439,14 +428,13 @@
     ExpressionGenerator.prototype._buildIOSSpringCustom = function (params, selectedKeyIndices) {
         var damping = (params.damping !== undefined) ? params.damping : 0.7;
         var velocity = (params.velocity !== undefined) ? params.velocity : 0.0;
-        var settlingTime = 4 / (Math.max(damping, 0.0001) * 12);
         var curveCode = this._buildIOSSpringCode(damping, velocity);
 
         return this._composeExpression(
             'iOS - Spring Custom',
             'damping=' + damping + ', velocity=' + velocity,
             curveCode,
-            { usePhysicalDuration: true, duration: settlingTime },
+            { usePhysicalDuration: true, duration: 1.0 },
             selectedKeyIndices
         );
     };
