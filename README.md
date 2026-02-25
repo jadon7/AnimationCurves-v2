@@ -1,6 +1,10 @@
 # Animation Curves v2 for After Effects
 
-Animation Curves v2 is a single-file ExtendScript plugin for Adobe After Effects that applies physics-based timing curves directly to selected keyframed properties.
+Animation Curves v2 applies physics-based timing curves directly to selected keyframed properties in Adobe After Effects.
+
+**Available in two versions:**
+- **ExtendScript** (single-file .jsx) - Floating window, easy installation
+- **CEP Extension** (dockable panel) - Modern UI, integrates into workspace
 
 It includes **7 curves from 4 platforms**:
 - **Rive**: 1 elastic curve
@@ -26,12 +30,32 @@ It includes **7 curves from 4 platforms**:
 
 ## Installation
 
+### Option 1: ExtendScript (Recommended for Quick Start)
+
 1. Locate your After Effects Scripts UI Panels folder:
-- macOS: `/Applications/Adobe After Effects <version>/Scripts/ScriptUI Panels/`
-- Windows: `C:\Program Files\Adobe\Adobe After Effects <version>\Support Files\Scripts\ScriptUI Panels\`
+   - macOS: `/Applications/Adobe After Effects <version>/Scripts/ScriptUI Panels/`
+   - Windows: `C:\Program Files\Adobe\Adobe After Effects <version>\Support Files\Scripts\ScriptUI Panels\`
 2. Copy `AnimationCurves.jsx` into that folder.
 3. Start or restart After Effects.
 4. Open from `Window > AnimationCurves.jsx`.
+
+**Pros:** Single file, instant setup, works everywhere
+**Cons:** Floating window (not dockable)
+
+### Option 2: CEP Extension (Dockable Panel)
+
+See detailed instructions in [`cep-extension/README.md`](cep-extension/README.md)
+
+**Pros:** Dockable panel, modern UI, integrates into workspace
+**Cons:** More complex setup, requires additional files
+
+Quick setup:
+```bash
+cd cep-extension
+./install-dev.sh
+```
+
+Then restart After Effects and go to `Window > Extensions > Animation Curves`.
 
 ## Quick Start
 
