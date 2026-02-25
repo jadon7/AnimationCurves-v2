@@ -69,7 +69,10 @@
         var omega = 12; // Fixed angular frequency (rad/s)
         var tau = clampedT * referenceDuration;
         var envelope = Math.exp(-damping * omega * tau);
-        var y = 1.0 - envelope * (Math.cos(omega * tau) + (velocity / omega) * Math.sin(omega * tau));
+        // Correct formula: velocity term should not be divided by omega
+        // For spring from 0 to 1: y = 1 - e^(-damping*omega*t) * [cos(omega*t) + ((damping*omega + velocity) / omega) * sin(omega*t)]
+        // Simplified: y = 1 - envelope * [cos(omega*t) + (damping + velocity/omega) * sin(omega*t)]
+        var y = 1.0 - envelope * (Math.cos(omega * tau) + (damping + velocity / omega) * Math.sin(omega * tau));
         return y;
     };
 
@@ -379,7 +382,7 @@
             "    } else {\n" +
             "      var tau = t * referenceDuration;\n" +
             "      var envelope = Math.exp(-damping * omega * tau);\n" +
-            "      val = 1 - envelope * (Math.cos(omega * tau) + (velocity / omega) * Math.sin(omega * tau));\n" +
+            "      val = 1 - envelope * (Math.cos(omega * tau) + (damping + velocity / omega) * Math.sin(omega * tau));\n" +
             "    }\n";
     };
 
