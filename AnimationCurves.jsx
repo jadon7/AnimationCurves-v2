@@ -532,7 +532,7 @@
         this.curveType = 'elastic';
         this.params = {
             amplitude: 1.0,
-            period: 0.3,
+            period: 1.0,
             easingType: 'easeOut'
         };
     }
@@ -1224,6 +1224,33 @@
                 return;
             }
             currentPlatform = tabs.selection.text;
+
+            // Update viewModel to match the selected platform's current UI state
+            var curveDef = getSelectedCurveDef(currentPlatform);
+            if (curveDef) {
+                viewModel.setPlatform(currentPlatform);
+                viewModel.setCurveType(curveDef.name);
+
+                // Read current values from UI controls for this platform
+                var ui = uiByPlatform[currentPlatform];
+                var params = {};
+                var i;
+                var ctrl;
+                for (i = 0; i < ui.paramControls.length; i += 1) {
+                    ctrl = ui.paramControls[i];
+                    if (ctrl.type === 'slider') {
+                        params[ctrl.key] = ctrl.slider.value;
+                    } else if (ctrl.type === 'dropdown') {
+                        if (ctrl.key === 'easingType') {
+                            params[ctrl.key] = dropdownEasingToInternal(ctrl.dropdown.selection.text);
+                        } else {
+                            params[ctrl.key] = ctrl.dropdown.selection.text;
+                        }
+                    }
+                }
+                viewModel.setParams(params);
+            }
+
             updatePreview();
             applyToKeyframesHelper();
             refreshLayout();
@@ -1255,6 +1282,14 @@
         initializeDefaultCurve('Folme');
         initializeDefaultCurve('Android');
         initializeDefaultCurve('iOS');
+
+        // Reset viewModel to current platform (Rive) after all initializations
+        var riveCurveDef = getSelectedCurveDef('Rive');
+        if (riveCurveDef) {
+            viewModel.setPlatform('Rive');
+            viewModel.setCurveType(riveCurveDef.name);
+            viewModel.setParams(defaultParamsForCurve(riveCurveDef));
+        }
 
         // Set initial preview and apply for Rive (first tab)
         updatePreview();
