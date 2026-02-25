@@ -12,7 +12,7 @@
 
     function RiveElasticCurve(amplitude, period, easingType) {
         this.amplitude = (typeof amplitude === 'number') ? amplitude : 1.0;
-        this.period = (typeof period === 'number' && period > 0) ? period : 0.3;
+        this.period = (typeof period === 'number' && period > 0) ? period : 1.0;
         this.easingType = easingType || 'easeOut';
     }
 
@@ -121,8 +121,8 @@
     };
 
     function FolmeSpringCurve(damping, response) {
-        this.damping = (typeof damping === 'number') ? damping : 0.9;
-        this.response = (typeof response === 'number' && response > 0) ? response : 0.3;
+        this.damping = (typeof damping === 'number') ? damping : 0.95;
+        this.response = (typeof response === 'number' && response > 0) ? response : 0.35;
     }
 
     FolmeSpringCurve.prototype.getValue = function (t) {
@@ -338,7 +338,7 @@
 
     ExpressionGenerator.prototype._buildRiveElastic = function (params, selectedKeyIndices) {
         var amplitude = (params.amplitude !== undefined) ? params.amplitude : 1.0;
-        var period = (params.period !== undefined) ? params.period : 0.3;
+        var period = (params.period !== undefined) ? params.period : 1.0;
         var easingType = normalizeEasingType(params.easingType || 'easeOut');
         var curveCode = "    var p = " + period + ";\n" +
             "    var a = Math.max(" + amplitude + ", 1.0);\n" +
@@ -474,8 +474,8 @@
     };
 
     ExpressionGenerator.prototype._buildFolmeSpring = function (params, selectedKeyIndices) {
-        var damping = (params.damping !== undefined) ? params.damping : 0.9;
-        var response = (params.response !== undefined) ? params.response : 0.3;
+        var damping = (params.damping !== undefined) ? params.damping : 0.95;
+        var response = (params.response !== undefined) ? params.response : 0.35;
         var referenceDuration = 1.0;
         var curveCode = this._buildFolmeSpringCode(damping, response);
 
@@ -705,7 +705,7 @@
                     name: 'Elastic',
                     params: [
                         { key: 'amplitude', label: 'Amplitude', type: 'slider', min: 1.0, max: 3.0, step: 0.01, defaultValue: 1.0 },
-                        { key: 'period', label: 'Period', type: 'slider', min: 0.1, max: 2.0, step: 0.01, defaultValue: 0.3 },
+                        { key: 'period', label: 'Period', type: 'slider', min: 0.1, max: 2.0, step: 0.01, defaultValue: 1.0 },
                         { key: 'easingType', label: 'Easing Type', type: 'dropdown', options: ['Ease Out', 'Ease In', 'Ease In-Out'], defaultValue: 'Ease Out' }
                     ]
                 }
@@ -748,8 +748,8 @@
                 {
                     name: 'Spring',
                     params: [
-                        { key: 'damping', label: 'Damping', type: 'slider', min: 0.1, max: 1.0, step: 0.01, defaultValue: 0.9 },
-                        { key: 'response', label: 'Response', type: 'slider', min: 0.1, max: 1.0, step: 0.01, defaultValue: 0.3 }
+                        { key: 'damping', label: 'Damping', type: 'slider', min: 0.1, max: 1.0, step: 0.01, defaultValue: 0.95 },
+                        { key: 'response', label: 'Response', type: 'slider', min: 0.1, max: 1.0, step: 0.01, defaultValue: 0.35 }
                     ]
                 }
             ]
