@@ -2,17 +2,20 @@
 
 Animation Curves v2 is a single-file ExtendScript plugin for Adobe After Effects that applies physics-based timing curves directly to selected keyframed properties.
 
-It includes **5 curves from 2 platforms**:
+It includes **7 curves from 4 platforms**:
 - **Rive**: 1 elastic curve
+- **Folme**: 1 spring curve
+- **Android**: 1 spring curve
 - **iOS**: 4 spring curves
 
 ## Features
 
 - Single-file script (`AnimationCurves.jsx`), no external dependencies
-- Platform tabs: **Rive**, **iOS**
-- 5 production-ready physics curves with parameter controls
-- Real-time curve preview text (platform, curve, parameters)
-- One-click apply to selected keyframed properties
+- Platform tabs: **Rive**, **Folme**, **Android**, **iOS**
+- 7 production-ready physics curves with parameter controls
+- Real-time curve preview with dark theme (280x110px canvas)
+- Auto-apply on parameter changes with live preview
+- Selective keyframe segment application (only applies to selected keyframes)
 - Batch apply to multiple properties in one operation
 - Built-in validation and user-facing error messages
 
@@ -33,23 +36,29 @@ It includes **5 curves from 2 platforms**:
 ## Quick Start
 
 1. Open a composition with keyframed properties.
-2. Select one or more properties in the timeline.
+2. Select one or more keyframes in the timeline (not just properties).
 3. Open `Window > AnimationCurves.jsx`.
-4. Choose a tab: **Rive** or **iOS**.
-5. Select a curve and adjust parameters (if shown).
-6. Click **Apply to Selected Keyframes**.
+4. Choose a tab: **Rive**, **Folme**, **Android**, or **iOS**.
+5. Select a curve and adjust parameters using sliders.
+6. Curves auto-apply on parameter changes - watch the preview update in real-time.
 7. Preview animation and iterate parameters as needed.
 
-## Curve Library (5 Total)
+## Curve Library (7 Total)
 
 ### Rive (1)
-- Elastic
+- Elastic (Amplitude: 1.0, Period: 1.0, Easing: Ease Out)
+
+### Folme (1)
+- Spring (Damping: 0.95, Response: 0.35)
+
+### Android (1)
+- Spring (Tension: 160, Friction: 18)
 
 ### iOS (4)
-- Spring Default
-- Spring Gentle
-- Spring Bouncy
-- Spring Custom
+- Spring Default (Damping: 0.8, Velocity: 0.0)
+- Spring Gentle (Damping: 0.9, Velocity: 0.0)
+- Spring Bouncy (Damping: 0.5, Velocity: 0.2)
+- Spring Custom (Damping: 0.7, Velocity: 0.0)
 
 ## Documentation
 
