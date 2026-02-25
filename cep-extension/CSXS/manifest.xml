@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<ExtensionManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ExtensionBundleId="com.animationcurves.panel" ExtensionBundleVersion="2.0.0" Version="11.0">
+  <ExtensionList>
+    <Extension Id="com.animationcurves.panel" Version="2.0.0"/>
+  </ExtensionList>
+  <ExecutionEnvironment>
+    <HostList>
+      <Host Name="AEFT" Version="[15.0,99.9]"/>
+    </HostList>
+    <LocaleList>
+      <Locale Code="All"/>
+    </LocaleList>
+    <RequiredRuntimeList>
+      <RequiredRuntime Name="CSXS" Version="11.0"/>
+    </RequiredRuntimeList>
+  </ExecutionEnvironment>
+  <DispatchInfoList>
+    <Extension Id="com.animationcurves.panel">
+      <DispatchInfo>
+        <Resources>
+          <MainPath>./client/index.html</MainPath>
+          <ScriptPath>./host/index.jsx</ScriptPath>
+          <CEFCommandLine>
+            <Parameter>--enable-nodejs</Parameter>
+            <Parameter>--mixed-context</Parameter>
+          </CEFCommandLine>
+        </Resources>
+        <Lifecycle>
+          <AutoVisible>true</AutoVisible>
+        </Lifecycle>
+        <UI>
+          <Type>Panel</Type>
+          <Menu>Animation Curves</Menu>
+          <Geometry>
+            <Size>
+              <Height>640</Height>
+              <Width>330</Width>
+            </Size>
+            <MinSize>
+              <Height>400</Height>
+              <Width>330</Width>
+            </MinSize>
+          </Geometry>
+          <Icons>
+            <Icon Type="Normal">./client/icons/icon-normal.png</Icon>
+            <Icon Type="RollOver">./client/icons/icon-rollover.png</Icon>
+            <Icon Type="Disabled">./client/icons/icon-disabled.png</Icon>
+            <Icon Type="DarkNormal">./client/icons/icon-dark-normal.png</Icon>
+            <Icon Type="DarkRollOver">./client/icons/icon-dark-rollover.png</Icon>
+          </Icons>
+        </UI>
+      </DispatchInfo>
+    </Extension>
+  </DispatchInfoList>
+</ExtensionManifest>

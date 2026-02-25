@@ -1,0 +1,7 @@
+# CEP Extension specific
+client/lib/CSInterface.js
+*.zxp
+*.mxi
+.DS_Store
+Thumbs.db
+*-temp.jsx

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Animation Curves</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Tab Navigation -->
+    <div class="tabs">
+      <button class="tab-button active" data-platform="rive">Rive</button>
+      <button class="tab-button" data-platform="folme">Folme</button>
+      <button class="tab-button" data-platform="android">Android</button>
+      <button class="tab-button" data-platform="ios">iOS</button>
+    </div>
+
+    <!-- Curve Selection -->
+    <div class="curve-selection">
+      <label>Curve:</label>
+      <select id="curve-dropdown">
+        <option value="elastic">Elastic</option>
+      </select>
+    </div>
+
+    <!-- Parameters Panel -->
+    <div id="parameters-panel" class="parameters-panel">
+      <!-- Parameters will be dynamically generated -->
+    </div>
+
+    <!-- Curve Preview Canvas -->
+    <div class="preview-container">
+      <canvas id="preview-canvas" width="280" height="110"></canvas>
+    </div>
+  </div>
+
+  <!-- Load CSInterface library -->
+  <script src="./lib/CSInterface.js"></script>
+  <!-- Load curve mathematics -->
+  <script src="./curves.js"></script>
+  <!-- Load main application -->
+  <script src="./main.js"></script>
+</body>
+</html>
