@@ -9,6 +9,210 @@
         }
         return value;
     }
+
+    function RiveElasticCurve(amplitude, period, easingType) {
+        this.amplitude = (typeof amplitude === 'number') ? amplitude : 1.0;
+        this.period = (typeof period === 'number' && period > 0) ? period : 1.0;
+        this.easingType = easingType || 'easeOut';
+    }
+
+    RiveElasticCurve.prototype.getValue = function (t) {
+        var clampedT = clamp01(t);
+        if (clampedT === 0) {
+            return 0;
+        }
+        if (clampedT === 1) {
+            return 1;
+        }
+
+        var p = this.period;
+        var a = Math.max(this.amplitude, 1.0);
+        var s = p / (2 * Math.PI) * Math.asin(1 / a);
+        var x;
+
+        if (this.easingType === 'easeIn') {
+            x = -(a * Math.pow(2, 10 * (clampedT - 1)) * Math.sin((clampedT - 1 - s) * (2 * Math.PI) / p));
+            return x;
+        }
+
+        if (this.easingType === 'easeInOut') {
+            var t2 = clampedT * 2;
+            if (t2 < 1) {
+                x = -0.5 * (a * Math.pow(2, 10 * (t2 - 1)) * Math.sin((t2 - 1 - s) * (2 * Math.PI) / p));
+                return x;
+            }
+            x = a * Math.pow(2, -10 * (t2 - 1)) * Math.sin((t2 - 1 - s) * (2 * Math.PI) / p) * 0.5 + 1;
+            return x;
+        }
+
+        x = a * Math.pow(2, -10 * clampedT) * Math.sin((clampedT - s) * (2 * Math.PI) / p) + 1;
+        return x;
+    };
+
+    function IOSSpringCurve(damping, velocity) {
+        this.damping = (typeof damping === 'number') ? damping : 0.8;
+        this.velocity = (typeof velocity === 'number') ? velocity : 0.0;
+    }
+
+    IOSSpringCurve.prototype.getValue = function (t) {
+        var clampedT = clamp01(t);
+        if (clampedT === 0) {
+            return 0;
+        }
+        if (clampedT === 1) {
+            return 1;
+        }
+
+        var damping = Math.max(this.damping, 0.0001);
+        var referenceDuration = 1.0; // Fixed 1 second reference time
+        var velocity = this.velocity;
+        var omega = 12; // Fixed angular frequency (rad/s)
+        var tau = clampedT * referenceDuration;
+        var envelope = Math.exp(-damping * omega * tau);
+        // Enhanced velocity effect: use velocity directly without dividing by omega
+        // This makes velocity parameter changes much more visible
+        var sinCoeff = damping + velocity;
+        var y = 1.0 - envelope * (Math.cos(omega * tau) + sinCoeff * Math.sin(omega * tau));
+        return y;
+    };
+
+    function IOSSpringDefaultCurve(damping, velocity) {
+        this.spring = new IOSSpringCurve(
+            (typeof damping === 'number') ? damping : 0.8,
+            (typeof velocity === 'number') ? velocity : 0.0
+        );
+    }
+
+    IOSSpringDefaultCurve.prototype.getValue = function (t) {
+        return this.spring.getValue(t);
+    };
+
+    function IOSSpringGentleCurve(damping, velocity) {
+        this.spring = new IOSSpringCurve(
+            (typeof damping === 'number') ? damping : 0.9,
+            (typeof velocity === 'number') ? velocity : 0.0
+        );
+    }
+
+    IOSSpringGentleCurve.prototype.getValue = function (t) {
+        return this.spring.getValue(t);
+    };
+
+    function IOSSpringBouncyCurve(damping, velocity) {
+        this.spring = new IOSSpringCurve(
+            (typeof damping === 'number') ? damping : 0.5,
+            (typeof velocity === 'number') ? velocity : 0.0
+        );
+    }
+
+    IOSSpringBouncyCurve.prototype.getValue = function (t) {
+        return this.spring.getValue(t);
+    };
+
+    function IOSSpringCustomCurve(damping, velocity) {
+        this.spring = new IOSSpringCurve(
+            (typeof damping === 'number') ? damping : 0.7,
+            (typeof velocity === 'number') ? velocity : 0.0
+        );
+    }
+
+    IOSSpringCustomCurve.prototype.getValue = function (t) {
+        return this.spring.getValue(t);
+    };
+
+    function FolmeSpringCurve(damping, response) {
+        this.damping = (typeof damping === 'number') ? damping : 0.95;
+        this.response = (typeof response === 'number' && response > 0) ? response : 0.35;
+    }
+
+    FolmeSpringCurve.prototype.getValue = function (t) {
+        var clampedT = clamp01(t);
+        if (clampedT === 0) {
+            return 0;
+        }
+        if (clampedT === 1) {
+            return 1;
+        }
+
+        var damping = Math.max(this.damping, 0.0001);
+        var response = Math.max(this.response, 0.0001);
+        var referenceDuration = 1.0; // Fixed 1 second reference time
+
+        var mass = 1;
+        var tension = Math.pow(2 * Math.PI / response, 2) * mass;
+        var dampingCoeff = 4 * Math.PI * damping * mass / response;
+        dampingCoeff = Math.min(dampingCoeff, 60);
+
+        var physicsTime = clampedT * referenceDuration;
+        var dt = 0.001;
+        var steps = Math.floor(physicsTime / dt);
+        var value = 0;
+        var speed = 0;
+        var target = 1;
+        var i;
+
+        for (i = 0; i < steps; i += 1) {
+            var f = 0;
+            f -= speed * dampingCoeff;
+            f += (tension * (target - value));
+            speed += f * dt;
+            value += speed * dt;
+        }
+
+        return value;
+    };
+
+    function AndroidSpringCurve(tension, friction) {
+        this.tension = (typeof tension === 'number' && tension > 0) ? tension : 160.0;
+        this.friction = (typeof friction === 'number' && friction >= 0) ? friction : 18.0;
+    }
+
+    AndroidSpringCurve.prototype.getValue = function (t) {
+        var clampedT = clamp01(t);
+        if (clampedT === 0) {
+            return 0;
+        }
+        if (clampedT === 1) {
+            return 1;
+        }
+
+        var k = this.tension;
+        var c = this.friction;
+        var physicsTime = clampedT;
+        var delta = c * c - 4 * k;
+        var x;
+        var r1;
+        var r2;
+        var C1;
+        var C2;
+        var omega;
+        var B;
+
+        if (delta > 0) {
+            r1 = (-c + Math.sqrt(delta)) / 2;
+            r2 = (-c - Math.sqrt(delta)) / 2;
+            C1 = r2 / (r1 - r2);
+            C2 = -1 - C1;
+            x = 1 + C1 * Math.exp(r1 * physicsTime) + C2 * Math.exp(r2 * physicsTime);
+            return x;
+        }
+
+        if (delta === 0) {
+            r1 = -c / 2;
+            x = 1 + (-1 - r1 * physicsTime) * Math.exp(r1 * physicsTime);
+            return x;
+        }
+
+        omega = Math.sqrt(4 * k - c * c) / 2;
+        B = -c / (2 * omega);
+        x = 1 - Math.exp(-c * physicsTime / 2) * (Math.cos(omega * physicsTime) + B * Math.sin(omega * physicsTime));
+        return x;
+    };
+
+    // Part 2: Expression Generator
+    function ExpressionGenerator() {
+        this.templates = {
+            rive: {
                 elastic: this._buildRiveElastic
             },
             ios: {
@@ -322,5 +526,4 @@
         );
     };
 
-    // Part 3: Data Model
-    function Model() {
+})();
