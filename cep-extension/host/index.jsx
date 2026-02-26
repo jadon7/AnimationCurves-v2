@@ -23,7 +23,7 @@ function applyAnimationCurve(platform, curveType, params) {
             var prop = selectedProps[i];
 
             // Check if property can have expressions
-            if (!prop.canSetExpression || !prop.canSetExpression()) {
+            if (!prop.canSetExpression) {
                 continue;
             }
 
