@@ -264,17 +264,43 @@ function updatePreview() {
     // Create curve
     const curve = curveFactory.createCurve(currentPlatform, currentCurve.name, currentParams);
 
-    // Draw curve
+    // Calculate curve values and find min/max for auto-scaling
+    const steps = 200;
+    const values = [];
+    let minValue = Infinity;
+    let maxValue = -Infinity;
+
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const value = curve.getValue(t);
+      values.push(value);
+      minValue = Math.min(minValue, value);
+      maxValue = Math.max(maxValue, value);
+    }
+
+    // Add padding to the range
+    const range = maxValue - minValue;
+    const padding = range * 0.1;
+    minValue -= padding;
+    maxValue += padding;
+
+    // Ensure we always show 0 to 1 range at minimum
+    minValue = Math.min(minValue, 0);
+    maxValue = Math.max(maxValue, 1);
+
+    // Draw curve with auto-scaling
     ctx.strokeStyle = '#4d9aff';
     ctx.lineWidth = 2;
     ctx.beginPath();
 
-    const steps = 200;
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
-      const value = curve.getValue(t);
+      const value = values[i];
+
+      // Map value to canvas coordinates with auto-scaling
       const x = t * width;
-      const y = height - (value * height);
+      const normalizedValue = (value - minValue) / (maxValue - minValue);
+      const y = height - (normalizedValue * height);
 
       if (i === 0) {
         ctx.moveTo(x, y);
@@ -292,12 +318,39 @@ function updatePreview() {
 // Apply to Keyframes (calls ExtendScript)
 function applyToKeyframes() {
   const script = `applyAnimationCurve('${currentPlatform}', '${currentCurve.name}', ${JSON.stringify(currentParams)})`;
-  csInterface.evalScript(script);
+  csInterface.evalScript(script, function(result) {
+    try {
+      const response = JSON.parse(result);
+      if (!response.success) {
+        console.error('Apply failed:', response.error);
+        // You could show an alert or notification here
+        // alert('Error: ' + response.error);
+      } else {
+        console.log('Applied to', response.count, 'properties');
+      }
+    } catch (err) {
+      console.error('Failed to parse response:', err, result);
+    }
+  });
 }
 
 // Setup Canvas
 function setupCanvas() {
-  updatePreview();
+  const canvas = document.getElementById('preview-canvas');
+
+  // Set canvas resolution to match display size
+  function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    updatePreview();
+  }
+
+  // Initial resize
+  resizeCanvas();
+
+  // Resize on window resize
+  window.addEventListener('resize', resizeCanvas);
 }
 
 // Utility Functions
