@@ -1,4 +1,41 @@
     // Part 1: Curve Mathematics
+
+    // Utility functions
+    function normalizePlatform(platform) {
+        var p = String(platform || '').toLowerCase();
+        if (p === 'ios') {
+            return 'ios';
+        }
+        if (p === 'folme') {
+            return 'folme';
+        }
+        if (p === 'android') {
+            return 'android';
+        }
+        if (p === 'rive') {
+            return 'rive';
+        }
+        return p;
+    }
+
+    function normalizeCurveType(type) {
+        var text = String(type || '').toLowerCase();
+        text = text.replace(/\s+/g, ' ');
+        text = text.replace(/-/g, '');
+        return text;
+    }
+
+    function normalizeEasingType(easingType) {
+        var text = String(easingType || 'easeOut').toLowerCase();
+        if (text === 'ease in' || text === 'easein') {
+            return 'easeIn';
+        }
+        if (text === 'ease in-out' || text === 'ease inout' || text === 'easeinout') {
+            return 'easeInOut';
+        }
+        return 'easeOut';
+    }
+
     function clamp01(value) {
         if (value < 0) {
             return 0;
