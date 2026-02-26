@@ -36,10 +36,10 @@ class RiveElasticCurve {
   }
 }
 
-class IOSSpringCurve {
-  constructor(damping = 0.8, velocity = 0.0) {
-    this.damping = damping;
-    this.velocity = velocity;
+class IOSDurationBounceCurve {
+  constructor(duration = 0.5, bounce = 0.0) {
+    this.duration = Math.max(duration, 0.01);
+    this.bounce = Math.max(-1, Math.min(1, bounce));
   }
 
   getValue(t) {
@@ -47,14 +47,83 @@ class IOSSpringCurve {
     if (clampedT === 0) return 0;
     if (clampedT === 1) return 1;
 
-    const damping = Math.max(this.damping, 0.0001);
-    const referenceDuration = 1.0;
-    const velocity = this.velocity;
-    const omega = 12;
-    const tau = clampedT * referenceDuration;
-    const envelope = Math.exp(-damping * omega * tau);
-    const sinCoeff = damping + velocity;
-    return 1.0 - envelope * (Math.cos(omega * tau) + sinCoeff * Math.sin(omega * tau));
+    const dampingFraction = 1.0 - this.bounce;
+    const omega = 2 * Math.PI / this.duration;
+    const tau = clampedT * this.duration * 2;
+
+    if (dampingFraction < 1) {
+      const omegaD = omega * Math.sqrt(1 - dampingFraction * dampingFraction);
+      const envelope = Math.exp(-dampingFraction * omega * tau);
+      return 1 - envelope * (Math.cos(omegaD * tau) + (dampingFraction * omega / omegaD) * Math.sin(omegaD * tau));
+    }
+    const envelope = Math.exp(-omega * tau);
+    return 1 - envelope * (1 + omega * tau);
+  }
+}
+
+class IOSResponseDampingCurve {
+  constructor(response = 0.5, dampingFraction = 0.825) {
+    this.response = Math.max(response, 0.01);
+    this.dampingFraction = Math.max(dampingFraction, 0);
+  }
+
+  getValue(t) {
+    const clampedT = clamp01(t);
+    if (clampedT === 0) return 0;
+    if (clampedT === 1) return 1;
+
+    const omega = 2 * Math.PI / this.response;
+    const zeta = this.dampingFraction;
+    const tau = clampedT * this.response * 3;
+
+    if (zeta < 1) {
+      const omegaD = omega * Math.sqrt(1 - zeta * zeta);
+      const envelope = Math.exp(-zeta * omega * tau);
+      return 1 - envelope * (Math.cos(omegaD * tau) + (zeta * omega / omegaD) * Math.sin(omegaD * tau));
+    }
+    if (zeta === 1) {
+      const envelope = Math.exp(-omega * tau);
+      return 1 - envelope * (1 + omega * tau);
+    }
+    const r1 = -omega * (zeta + Math.sqrt(zeta * zeta - 1));
+    const r2 = -omega * (zeta - Math.sqrt(zeta * zeta - 1));
+    const C1 = r2 / (r2 - r1);
+    const C2 = -r1 / (r2 - r1);
+    return 1 - C1 * Math.exp(r1 * tau) - C2 * Math.exp(r2 * tau);
+  }
+}
+
+class IOSPhysicsCurve {
+  constructor(mass = 1.0, stiffness = 200.0, damping = 20.0) {
+    this.mass = Math.max(mass, 0.01);
+    this.stiffness = Math.max(stiffness, 0.01);
+    this.damping = Math.max(damping, 0);
+  }
+
+  getValue(t) {
+    const clampedT = clamp01(t);
+    if (clampedT === 0) return 0;
+    if (clampedT === 1) return 1;
+
+    const omega = Math.sqrt(this.stiffness / this.mass);
+    const zeta = this.damping / (2 * Math.sqrt(this.stiffness * this.mass));
+    const settlingTime = Math.max(4 / (zeta * omega), 0.1);
+    const tau = clampedT * settlingTime;
+
+    if (zeta < 1) {
+      const omegaD = omega * Math.sqrt(1 - zeta * zeta);
+      const envelope = Math.exp(-zeta * omega * tau);
+      return 1 - envelope * (Math.cos(omegaD * tau) + (zeta * omega / omegaD) * Math.sin(omegaD * tau));
+    }
+    if (zeta === 1) {
+      const envelope = Math.exp(-omega * tau);
+      return 1 - envelope * (1 + omega * tau);
+    }
+    const r1 = -omega * (zeta + Math.sqrt(zeta * zeta - 1));
+    const r2 = -omega * (zeta - Math.sqrt(zeta * zeta - 1));
+    const C1 = r2 / (r2 - r1);
+    const C2 = -r1 / (r2 - r1);
+    return 1 - C1 * Math.exp(r1 * tau) - C2 * Math.exp(r2 * tau);
   }
 }
 
@@ -97,9 +166,9 @@ class FolmeSpringCurve {
 }
 
 class AndroidSpringCurve {
-  constructor(tension = 160.0, friction = 18.0) {
-    this.tension = tension > 0 ? tension : 160.0;
-    this.friction = friction >= 0 ? friction : 18.0;
+  constructor(stiffness = 1500.0, dampingRatio = 0.5) {
+    this.stiffness = Math.max(stiffness, 0.01);
+    this.dampingRatio = Math.max(dampingRatio, 0);
   }
 
   getValue(t) {
@@ -107,33 +176,32 @@ class AndroidSpringCurve {
     if (clampedT === 0) return 0;
     if (clampedT === 1) return 1;
 
-    const k = this.tension;
-    const c = this.friction;
-    const physicsTime = clampedT;
-    const delta = c * c - 4 * k;
+    const mass = 1.0;
+    const omega = Math.sqrt(this.stiffness / mass);
+    const zeta = this.dampingRatio;
+    const settlingTime = Math.max(4 / (Math.max(zeta, 0.001) * omega), 0.1);
+    const tau = clampedT * settlingTime;
 
-    if (delta > 0) {
-      const r1 = (-c + Math.sqrt(delta)) / 2;
-      const r2 = (-c - Math.sqrt(delta)) / 2;
-      const C1 = r2 / (r1 - r2);
-      const C2 = -1 - C1;
-      return 1 + C1 * Math.exp(r1 * physicsTime) + C2 * Math.exp(r2 * physicsTime);
+    if (zeta < 1) {
+      const omegaD = omega * Math.sqrt(1 - zeta * zeta);
+      const envelope = Math.exp(-zeta * omega * tau);
+      return 1 - envelope * (Math.cos(omegaD * tau) + (zeta * omega / omegaD) * Math.sin(omegaD * tau));
     }
-
-    if (delta === 0) {
-      const r1 = -c / 2;
-      return 1 + (-1 - r1 * physicsTime) * Math.exp(r1 * physicsTime);
+    if (zeta === 1) {
+      const envelope = Math.exp(-omega * tau);
+      return 1 - envelope * (1 + omega * tau);
     }
-
-    const omega = Math.sqrt(4 * k - c * c) / 2;
-    const B = -c / (2 * omega);
-    return 1 - Math.exp(-c * physicsTime / 2) * (Math.cos(omega * physicsTime) + B * Math.sin(omega * physicsTime));
+    const r1 = -omega * (zeta + Math.sqrt(zeta * zeta - 1));
+    const r2 = -omega * (zeta - Math.sqrt(zeta * zeta - 1));
+    const C1 = r2 / (r2 - r1);
+    const C2 = -r1 / (r2 - r1);
+    return 1 - C1 * Math.exp(r1 * tau) - C2 * Math.exp(r2 * tau);
   }
 }
 
 class AndroidFlingCurve {
-  constructor(velocity = 5.0, friction = 1.0) {
-    this.velocity = velocity;
+  constructor(startVelocity = 5000.0, friction = 1.0) {
+    this.startVelocity = startVelocity;
     this.friction = friction > 0 ? friction : 1.0;
   }
 
@@ -142,16 +210,11 @@ class AndroidFlingCurve {
     if (clampedT === 0) return 0;
     if (clampedT === 1) return 1;
 
-    const velocity = this.velocity;
+    const velocity = Math.abs(this.startVelocity);
     const friction = this.friction;
-    const referenceDuration = 1.0;
-    const physicsTime = clampedT * referenceDuration;
-
-    // Fling animation: exponential decay
+    const physicsTime = clampedT;
     const decay = Math.exp(-friction * physicsTime);
     const distance = velocity * (1 - decay) / friction;
-
-    // Normalize to 0-1 range
     const maxDistance = velocity / friction;
     return distance / maxDistance;
   }
@@ -164,15 +227,19 @@ class CurveFactory {
     const c = curveType.toLowerCase();
 
     if (p === 'rive' && c === 'elastic') {
-      return new RiveElasticCurve(
-        params.amplitude,
-        params.period,
-        params.easingType
-      );
+      return new RiveElasticCurve(params.amplitude, params.period, params.easingType);
     }
 
     if (p === 'ios') {
-      return new IOSSpringCurve(params.damping, params.velocity);
+      if (c === 'duration + bounce') {
+        return new IOSDurationBounceCurve(params.duration, params.bounce);
+      }
+      if (c === 'response + damping') {
+        return new IOSResponseDampingCurve(params.response, params.dampingFraction);
+      }
+      if (c === 'physics') {
+        return new IOSPhysicsCurve(params.mass, params.stiffness, params.damping);
+      }
     }
 
     if (p === 'folme' && c === 'spring') {
@@ -181,10 +248,10 @@ class CurveFactory {
 
     if (p === 'android') {
       if (c === 'spring') {
-        return new AndroidSpringCurve(params.tension, params.friction);
+        return new AndroidSpringCurve(params.stiffness, params.dampingRatio);
       }
       if (c === 'fling') {
-        return new AndroidFlingCurve(params.velocity, params.friction);
+        return new AndroidFlingCurve(params.startVelocity, params.friction);
       }
     }
 

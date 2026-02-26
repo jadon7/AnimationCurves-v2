@@ -85,75 +85,93 @@
         return x;
     };
 
-    function IOSSpringCurve(damping, velocity) {
-        this.damping = (typeof damping === 'number') ? damping : 0.8;
-        this.velocity = (typeof velocity === 'number') ? velocity : 0.0;
+    function IOSDurationBounceCurve(duration, bounce) {
+        this.duration = (typeof duration === 'number' && duration > 0) ? duration : 0.5;
+        this.bounce = (typeof bounce === 'number') ? Math.max(-1, Math.min(1, bounce)) : 0.0;
     }
 
-    IOSSpringCurve.prototype.getValue = function (t) {
+    IOSDurationBounceCurve.prototype.getValue = function (t) {
         var clampedT = clamp01(t);
-        if (clampedT === 0) {
-            return 0;
+        if (clampedT === 0) return 0;
+        if (clampedT === 1) return 1;
+
+        var dampingFraction = 1.0 - this.bounce;
+        var omega = 2 * Math.PI / this.duration;
+        var tau = clampedT * this.duration * 2;
+        var envelope;
+
+        if (dampingFraction < 1) {
+            var omegaD = omega * Math.sqrt(1 - dampingFraction * dampingFraction);
+            envelope = Math.exp(-dampingFraction * omega * tau);
+            return 1 - envelope * (Math.cos(omegaD * tau) + (dampingFraction * omega / omegaD) * Math.sin(omegaD * tau));
         }
-        if (clampedT === 1) {
-            return 1;
+        envelope = Math.exp(-omega * tau);
+        return 1 - envelope * (1 + omega * tau);
+    };
+
+    function IOSResponseDampingCurve(response, dampingFraction) {
+        this.response = (typeof response === 'number' && response > 0) ? response : 0.5;
+        this.dampingFraction = (typeof dampingFraction === 'number') ? Math.max(dampingFraction, 0) : 0.825;
+    }
+
+    IOSResponseDampingCurve.prototype.getValue = function (t) {
+        var clampedT = clamp01(t);
+        if (clampedT === 0) return 0;
+        if (clampedT === 1) return 1;
+
+        var omega = 2 * Math.PI / this.response;
+        var zeta = this.dampingFraction;
+        var tau = clampedT * this.response * 3;
+        var envelope, omegaD, r1, r2, C1, C2;
+
+        if (zeta < 1) {
+            omegaD = omega * Math.sqrt(1 - zeta * zeta);
+            envelope = Math.exp(-zeta * omega * tau);
+            return 1 - envelope * (Math.cos(omegaD * tau) + (zeta * omega / omegaD) * Math.sin(omegaD * tau));
         }
-
-        var damping = Math.max(this.damping, 0.0001);
-        var referenceDuration = 1.0; // Fixed 1 second reference time
-        var velocity = this.velocity;
-        var omega = 12; // Fixed angular frequency (rad/s)
-        var tau = clampedT * referenceDuration;
-        var envelope = Math.exp(-damping * omega * tau);
-        // Enhanced velocity effect: use velocity directly without dividing by omega
-        // This makes velocity parameter changes much more visible
-        var sinCoeff = damping + velocity;
-        var y = 1.0 - envelope * (Math.cos(omega * tau) + sinCoeff * Math.sin(omega * tau));
-        return y;
+        if (zeta === 1) {
+            envelope = Math.exp(-omega * tau);
+            return 1 - envelope * (1 + omega * tau);
+        }
+        r1 = -omega * (zeta + Math.sqrt(zeta * zeta - 1));
+        r2 = -omega * (zeta - Math.sqrt(zeta * zeta - 1));
+        C1 = r2 / (r2 - r1);
+        C2 = -r1 / (r2 - r1);
+        return 1 - C1 * Math.exp(r1 * tau) - C2 * Math.exp(r2 * tau);
     };
 
-    function IOSSpringDefaultCurve(damping, velocity) {
-        this.spring = new IOSSpringCurve(
-            (typeof damping === 'number') ? damping : 0.8,
-            (typeof velocity === 'number') ? velocity : 0.0
-        );
+    function IOSPhysicsCurve(mass, stiffness, damping) {
+        this.mass = (typeof mass === 'number' && mass > 0) ? mass : 1.0;
+        this.stiffness = (typeof stiffness === 'number' && stiffness > 0) ? stiffness : 200.0;
+        this.damping = (typeof damping === 'number') ? Math.max(damping, 0) : 20.0;
     }
 
-    IOSSpringDefaultCurve.prototype.getValue = function (t) {
-        return this.spring.getValue(t);
-    };
+    IOSPhysicsCurve.prototype.getValue = function (t) {
+        var clampedT = clamp01(t);
+        if (clampedT === 0) return 0;
+        if (clampedT === 1) return 1;
 
-    function IOSSpringGentleCurve(damping, velocity) {
-        this.spring = new IOSSpringCurve(
-            (typeof damping === 'number') ? damping : 0.9,
-            (typeof velocity === 'number') ? velocity : 0.0
-        );
-    }
+        var omega = Math.sqrt(this.stiffness / this.mass);
+        var zeta = this.damping / (2 * Math.sqrt(this.stiffness * this.mass));
+        var settlingTime = 4 / (Math.max(zeta, 0.001) * omega);
+        if (settlingTime < 0.1) settlingTime = 0.1;
+        var tau = clampedT * settlingTime;
+        var envelope, omegaD, r1, r2, C1, C2;
 
-    IOSSpringGentleCurve.prototype.getValue = function (t) {
-        return this.spring.getValue(t);
-    };
-
-    function IOSSpringBouncyCurve(damping, velocity) {
-        this.spring = new IOSSpringCurve(
-            (typeof damping === 'number') ? damping : 0.5,
-            (typeof velocity === 'number') ? velocity : 0.0
-        );
-    }
-
-    IOSSpringBouncyCurve.prototype.getValue = function (t) {
-        return this.spring.getValue(t);
-    };
-
-    function IOSSpringCustomCurve(damping, velocity) {
-        this.spring = new IOSSpringCurve(
-            (typeof damping === 'number') ? damping : 0.7,
-            (typeof velocity === 'number') ? velocity : 0.0
-        );
-    }
-
-    IOSSpringCustomCurve.prototype.getValue = function (t) {
-        return this.spring.getValue(t);
+        if (zeta < 1) {
+            omegaD = omega * Math.sqrt(1 - zeta * zeta);
+            envelope = Math.exp(-zeta * omega * tau);
+            return 1 - envelope * (Math.cos(omegaD * tau) + (zeta * omega / omegaD) * Math.sin(omegaD * tau));
+        }
+        if (zeta === 1) {
+            envelope = Math.exp(-omega * tau);
+            return 1 - envelope * (1 + omega * tau);
+        }
+        r1 = -omega * (zeta + Math.sqrt(zeta * zeta - 1));
+        r2 = -omega * (zeta - Math.sqrt(zeta * zeta - 1));
+        C1 = r2 / (r2 - r1);
+        C2 = -r1 / (r2 - r1);
+        return 1 - C1 * Math.exp(r1 * tau) - C2 * Math.exp(r2 * tau);
     };
 
     function FolmeSpringCurve(damping, response) {
@@ -198,51 +216,38 @@
         return value;
     };
 
-    function AndroidSpringCurve(tension, friction) {
-        this.tension = (typeof tension === 'number' && tension > 0) ? tension : 160.0;
-        this.friction = (typeof friction === 'number' && friction >= 0) ? friction : 18.0;
+    function AndroidSpringCurve(stiffness, dampingRatio) {
+        this.stiffness = (typeof stiffness === 'number' && stiffness > 0) ? stiffness : 1500.0;
+        this.dampingRatio = (typeof dampingRatio === 'number' && dampingRatio >= 0) ? dampingRatio : 0.5;
     }
 
     AndroidSpringCurve.prototype.getValue = function (t) {
         var clampedT = clamp01(t);
-        if (clampedT === 0) {
-            return 0;
-        }
-        if (clampedT === 1) {
-            return 1;
-        }
+        if (clampedT === 0) return 0;
+        if (clampedT === 1) return 1;
 
-        var k = this.tension;
-        var c = this.friction;
-        var physicsTime = clampedT;
-        var delta = c * c - 4 * k;
-        var x;
-        var r1;
-        var r2;
-        var C1;
-        var C2;
-        var omega;
-        var B;
+        var mass = 1.0;
+        var omega = Math.sqrt(this.stiffness / mass);
+        var zeta = this.dampingRatio;
+        var settlingTime = 4 / (Math.max(zeta, 0.001) * omega);
+        if (settlingTime < 0.1) settlingTime = 0.1;
+        var tau = clampedT * settlingTime;
+        var envelope, omegaD, r1, r2, C1, C2;
 
-        if (delta > 0) {
-            r1 = (-c + Math.sqrt(delta)) / 2;
-            r2 = (-c - Math.sqrt(delta)) / 2;
-            C1 = r2 / (r1 - r2);
-            C2 = -1 - C1;
-            x = 1 + C1 * Math.exp(r1 * physicsTime) + C2 * Math.exp(r2 * physicsTime);
-            return x;
+        if (zeta < 1) {
+            omegaD = omega * Math.sqrt(1 - zeta * zeta);
+            envelope = Math.exp(-zeta * omega * tau);
+            return 1 - envelope * (Math.cos(omegaD * tau) + (zeta * omega / omegaD) * Math.sin(omegaD * tau));
         }
-
-        if (delta === 0) {
-            r1 = -c / 2;
-            x = 1 + (-1 - r1 * physicsTime) * Math.exp(r1 * physicsTime);
-            return x;
+        if (zeta === 1) {
+            envelope = Math.exp(-omega * tau);
+            return 1 - envelope * (1 + omega * tau);
         }
-
-        omega = Math.sqrt(4 * k - c * c) / 2;
-        B = -c / (2 * omega);
-        x = 1 - Math.exp(-c * physicsTime / 2) * (Math.cos(omega * physicsTime) + B * Math.sin(omega * physicsTime));
-        return x;
+        r1 = -omega * (zeta + Math.sqrt(zeta * zeta - 1));
+        r2 = -omega * (zeta - Math.sqrt(zeta * zeta - 1));
+        C1 = r2 / (r2 - r1);
+        C2 = -r1 / (r2 - r1);
+        return 1 - C1 * Math.exp(r1 * tau) - C2 * Math.exp(r2 * tau);
     };
 
     // Part 2: Expression Generator
@@ -252,10 +257,9 @@
                 elastic: this._buildRiveElastic
             },
             ios: {
-                "spring default": this._buildIOSSpringDefault,
-                "spring gentle": this._buildIOSSpringGentle,
-                "spring bouncy": this._buildIOSSpringBouncy,
-                "spring custom": this._buildIOSSpringCustom
+                "duration + bounce": this._buildIOSDurationBounce,
+                "response + damping": this._buildIOSResponseDamping,
+                "physics": this._buildIOSPhysics
             },
             folme: {
                 spring: this._buildFolmeSpring
@@ -407,75 +411,107 @@
         );
     };
 
-    ExpressionGenerator.prototype._buildIOSSpringCode = function (damping, velocity) {
-        return "    var damping = " + damping + ";\n" +
-            "    var velocity = " + velocity + ";\n" +
-            "    var referenceDuration = 1.0;\n" +
-            "    var omega = 12;\n" +
+    ExpressionGenerator.prototype._buildIOSDurationBounce = function (params, selectedKeyIndices) {
+        var duration = (params.duration !== undefined) ? params.duration : 0.5;
+        var bounce = (params.bounce !== undefined) ? params.bounce : 0.0;
+        var curveCode = "    var dur = " + duration + ";\n" +
+            "    var bounce = " + bounce + ";\n" +
+            "    var dampingFraction = 1.0 - bounce;\n" +
+            "    var omega = 2 * Math.PI / dur;\n" +
+            "    var tau = t * dur * 2;\n" +
             "    if (t === 0) {\n" +
             "      val = 0;\n" +
             "    } else if (t === 1) {\n" +
             "      val = 1;\n" +
+            "    } else if (dampingFraction < 1) {\n" +
+            "      var omegaD = omega * Math.sqrt(1 - dampingFraction * dampingFraction);\n" +
+            "      var env = Math.exp(-dampingFraction * omega * tau);\n" +
+            "      val = 1 - env * (Math.cos(omegaD * tau) + (dampingFraction * omega / omegaD) * Math.sin(omegaD * tau));\n" +
             "    } else {\n" +
-            "      var tau = t * referenceDuration;\n" +
-            "      var envelope = Math.exp(-damping * omega * tau);\n" +
-            "      var sinCoeff = damping + velocity;\n" +
-            "      val = 1 - envelope * (Math.cos(omega * tau) + sinCoeff * Math.sin(omega * tau));\n" +
+            "      var env = Math.exp(-omega * tau);\n" +
+            "      val = 1 - env * (1 + omega * tau);\n" +
             "    }\n";
-    };
-
-    ExpressionGenerator.prototype._buildIOSSpringDefault = function (params, selectedKeyIndices) {
-        var damping = (params.damping !== undefined) ? params.damping : 0.8;
-        var velocity = (params.velocity !== undefined) ? params.velocity : 0.0;
-        var curveCode = this._buildIOSSpringCode(damping, velocity);
 
         return this._composeExpression(
-            'iOS - Spring Default',
-            'damping=' + damping + ', velocity=' + velocity,
+            'iOS - Duration + Bounce',
+            'duration=' + duration + ', bounce=' + bounce,
             curveCode,
-            { usePhysicalDuration: true, duration: 1.0 },
+            { usePhysicalDuration: true, duration: duration * 2 },
             selectedKeyIndices
         );
     };
 
-    ExpressionGenerator.prototype._buildIOSSpringGentle = function (params, selectedKeyIndices) {
-        var damping = (params.damping !== undefined) ? params.damping : 0.9;
-        var velocity = (params.velocity !== undefined) ? params.velocity : 0.0;
-        var curveCode = this._buildIOSSpringCode(damping, velocity);
+    ExpressionGenerator.prototype._buildIOSResponseDamping = function (params, selectedKeyIndices) {
+        var response = (params.response !== undefined) ? params.response : 0.5;
+        var dampingFraction = (params.dampingFraction !== undefined) ? params.dampingFraction : 0.825;
+        var curveCode = "    var resp = " + response + ";\n" +
+            "    var zeta = " + dampingFraction + ";\n" +
+            "    var omega = 2 * Math.PI / resp;\n" +
+            "    var tau = t * resp * 3;\n" +
+            "    if (t === 0) {\n" +
+            "      val = 0;\n" +
+            "    } else if (t === 1) {\n" +
+            "      val = 1;\n" +
+            "    } else if (zeta < 1) {\n" +
+            "      var omegaD = omega * Math.sqrt(1 - zeta * zeta);\n" +
+            "      var env = Math.exp(-zeta * omega * tau);\n" +
+            "      val = 1 - env * (Math.cos(omegaD * tau) + (zeta * omega / omegaD) * Math.sin(omegaD * tau));\n" +
+            "    } else if (zeta === 1) {\n" +
+            "      var env = Math.exp(-omega * tau);\n" +
+            "      val = 1 - env * (1 + omega * tau);\n" +
+            "    } else {\n" +
+            "      var r1 = -omega * (zeta + Math.sqrt(zeta * zeta - 1));\n" +
+            "      var r2 = -omega * (zeta - Math.sqrt(zeta * zeta - 1));\n" +
+            "      var C1 = r2 / (r2 - r1);\n" +
+            "      var C2 = -r1 / (r2 - r1);\n" +
+            "      val = 1 - C1 * Math.exp(r1 * tau) - C2 * Math.exp(r2 * tau);\n" +
+            "    }\n";
 
         return this._composeExpression(
-            'iOS - Spring Gentle',
-            'damping=' + damping + ', velocity=' + velocity,
+            'iOS - Response + Damping',
+            'response=' + response + ', dampingFraction=' + dampingFraction,
             curveCode,
-            { usePhysicalDuration: true, duration: 1.0 },
+            { usePhysicalDuration: true, duration: response * 3 },
             selectedKeyIndices
         );
     };
 
-    ExpressionGenerator.prototype._buildIOSSpringBouncy = function (params, selectedKeyIndices) {
-        var damping = (params.damping !== undefined) ? params.damping : 0.5;
-        var velocity = (params.velocity !== undefined) ? params.velocity : 0.0;
-        var curveCode = this._buildIOSSpringCode(damping, velocity);
+    ExpressionGenerator.prototype._buildIOSPhysics = function (params, selectedKeyIndices) {
+        var mass = (params.mass !== undefined) ? params.mass : 1.0;
+        var stiffness = (params.stiffness !== undefined) ? params.stiffness : 200.0;
+        var damping = (params.damping !== undefined) ? params.damping : 20.0;
+        var curveCode = "    var mass = " + mass + ";\n" +
+            "    var stiffness = " + stiffness + ";\n" +
+            "    var damp = " + damping + ";\n" +
+            "    var omega = Math.sqrt(stiffness / mass);\n" +
+            "    var zeta = damp / (2 * Math.sqrt(stiffness * mass));\n" +
+            "    var sTime = 4 / (Math.max(zeta, 0.001) * omega);\n" +
+            "    if (sTime < 0.1) sTime = 0.1;\n" +
+            "    var tau = t * sTime;\n" +
+            "    if (t === 0) {\n" +
+            "      val = 0;\n" +
+            "    } else if (t === 1) {\n" +
+            "      val = 1;\n" +
+            "    } else if (zeta < 1) {\n" +
+            "      var omegaD = omega * Math.sqrt(1 - zeta * zeta);\n" +
+            "      var env = Math.exp(-zeta * omega * tau);\n" +
+            "      val = 1 - env * (Math.cos(omegaD * tau) + (zeta * omega / omegaD) * Math.sin(omegaD * tau));\n" +
+            "    } else if (zeta === 1) {\n" +
+            "      var env = Math.exp(-omega * tau);\n" +
+            "      val = 1 - env * (1 + omega * tau);\n" +
+            "    } else {\n" +
+            "      var r1 = -omega * (zeta + Math.sqrt(zeta * zeta - 1));\n" +
+            "      var r2 = -omega * (zeta - Math.sqrt(zeta * zeta - 1));\n" +
+            "      var C1 = r2 / (r2 - r1);\n" +
+            "      var C2 = -r1 / (r2 - r1);\n" +
+            "      val = 1 - C1 * Math.exp(r1 * tau) - C2 * Math.exp(r2 * tau);\n" +
+            "    }\n";
 
         return this._composeExpression(
-            'iOS - Spring Bouncy',
-            'damping=' + damping + ', velocity=' + velocity,
+            'iOS - Physics',
+            'mass=' + mass + ', stiffness=' + stiffness + ', damping=' + damping,
             curveCode,
-            { usePhysicalDuration: true, duration: 1.0 },
-            selectedKeyIndices
-        );
-    };
-
-    ExpressionGenerator.prototype._buildIOSSpringCustom = function (params, selectedKeyIndices) {
-        var damping = (params.damping !== undefined) ? params.damping : 0.7;
-        var velocity = (params.velocity !== undefined) ? params.velocity : 0.0;
-        var curveCode = this._buildIOSSpringCode(damping, velocity);
-
-        return this._composeExpression(
-            'iOS - Spring Custom',
-            'damping=' + damping + ', velocity=' + velocity,
-            curveCode,
-            { usePhysicalDuration: true, duration: 1.0 },
+            { usePhysicalDuration: true, duration: 2.0 },
             selectedKeyIndices
         );
     };
@@ -525,55 +561,58 @@
         );
     };
 
-    ExpressionGenerator.prototype._buildAndroidSpringCode = function (tension, friction) {
-        return "    var tension = " + tension + ";\n" +
-            "    var friction = " + friction + ";\n" +
-            "    var delta = friction * friction - 4 * tension;\n" +
+    ExpressionGenerator.prototype._buildAndroidSpringCode = function (stiffness, dampingRatio) {
+        return "    var stiffness = " + stiffness + ";\n" +
+            "    var dampingRatio = " + dampingRatio + ";\n" +
+            "    var mass = 1.0;\n" +
+            "    var omega = Math.sqrt(stiffness / mass);\n" +
+            "    var zeta = dampingRatio;\n" +
+            "    var sTime = 4 / (Math.max(zeta, 0.001) * omega);\n" +
+            "    if (sTime < 0.1) sTime = 0.1;\n" +
+            "    var tau = t * sTime;\n" +
             "    if (t === 0) {\n" +
             "      val = 0;\n" +
             "    } else if (t === 1) {\n" +
             "      val = 1;\n" +
-            "    } else if (delta > 0) {\n" +
-            "      var r1 = (-friction + Math.sqrt(delta)) / 2;\n" +
-            "      var r2 = (-friction - Math.sqrt(delta)) / 2;\n" +
-            "      var C1 = r2 / (r1 - r2);\n" +
-            "      var C2 = -1 - C1;\n" +
-            "      val = 1 + C1 * Math.exp(r1 * t) + C2 * Math.exp(r2 * t);\n" +
-            "    } else if (delta === 0) {\n" +
-            "      var r = -friction / 2;\n" +
-            "      val = 1 + (-1 - r * t) * Math.exp(r * t);\n" +
+            "    } else if (zeta < 1) {\n" +
+            "      var omegaD = omega * Math.sqrt(1 - zeta * zeta);\n" +
+            "      var env = Math.exp(-zeta * omega * tau);\n" +
+            "      val = 1 - env * (Math.cos(omegaD * tau) + (zeta * omega / omegaD) * Math.sin(omegaD * tau));\n" +
+            "    } else if (zeta === 1) {\n" +
+            "      var env = Math.exp(-omega * tau);\n" +
+            "      val = 1 - env * (1 + omega * tau);\n" +
             "    } else {\n" +
-            "      var omega = Math.sqrt(4 * tension - friction * friction) / 2;\n" +
-            "      var B = -friction / (2 * omega);\n" +
-            "      val = 1 - Math.exp(-friction * t / 2) * (Math.cos(omega * t) + B * Math.sin(omega * t));\n" +
+            "      var r1 = -omega * (zeta + Math.sqrt(zeta * zeta - 1));\n" +
+            "      var r2 = -omega * (zeta - Math.sqrt(zeta * zeta - 1));\n" +
+            "      var C1 = r2 / (r2 - r1);\n" +
+            "      var C2 = -r1 / (r2 - r1);\n" +
+            "      val = 1 - C1 * Math.exp(r1 * tau) - C2 * Math.exp(r2 * tau);\n" +
             "    }\n";
     };
 
     ExpressionGenerator.prototype._buildAndroidSpring = function (params, selectedKeyIndices) {
-        var tension = (params.tension !== undefined) ? params.tension : 160.0;
-        var friction = (params.friction !== undefined) ? params.friction : 18.0;
-        var curveCode = this._buildAndroidSpringCode(tension, friction);
+        var stiffness = (params.stiffness !== undefined) ? params.stiffness : 1500.0;
+        var dampingRatio = (params.dampingRatio !== undefined) ? params.dampingRatio : 0.5;
+        var curveCode = this._buildAndroidSpringCode(stiffness, dampingRatio);
 
         return this._composeExpression(
-            'Android - SpringInterpolator',
-            'tension=' + tension + ', friction=' + friction,
+            'Android - SpringAnimation',
+            'stiffness=' + stiffness + ', dampingRatio=' + dampingRatio,
             curveCode,
-            undefined,
+            { usePhysicalDuration: true, duration: 1.0 },
             selectedKeyIndices
         );
     };
 
-    ExpressionGenerator.prototype._buildAndroidFlingCode = function (velocity, friction) {
-        return "    var velocity = " + velocity + ";\n" +
+    ExpressionGenerator.prototype._buildAndroidFlingCode = function (startVelocity, friction) {
+        return "    var velocity = Math.abs(" + startVelocity + ");\n" +
             "    var friction = " + friction + ";\n" +
-            "    var referenceDuration = 1.0;\n" +
             "    if (t === 0) {\n" +
             "      val = 0;\n" +
             "    } else if (t === 1) {\n" +
             "      val = 1;\n" +
             "    } else {\n" +
-            "      var physicsTime = t * referenceDuration;\n" +
-            "      var decay = Math.exp(-friction * physicsTime);\n" +
+            "      var decay = Math.exp(-friction * t);\n" +
             "      var distance = velocity * (1 - decay) / friction;\n" +
             "      var maxDistance = velocity / friction;\n" +
             "      val = distance / maxDistance;\n" +
@@ -581,13 +620,13 @@
     };
 
     ExpressionGenerator.prototype._buildAndroidFling = function (params, selectedKeyIndices) {
-        var velocity = (params.velocity !== undefined) ? params.velocity : 5.0;
+        var startVelocity = (params.startVelocity !== undefined) ? params.startVelocity : 5000.0;
         var friction = (params.friction !== undefined) ? params.friction : 1.0;
-        var curveCode = this._buildAndroidFlingCode(velocity, friction);
+        var curveCode = this._buildAndroidFlingCode(startVelocity, friction);
 
         return this._composeExpression(
             'Android - FlingAnimation',
-            'velocity=' + velocity + ', friction=' + friction,
+            'startVelocity=' + startVelocity + ', friction=' + friction,
             curveCode,
             { usePhysicalDuration: true, duration: 1.0 },
             selectedKeyIndices
