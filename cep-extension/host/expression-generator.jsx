@@ -1,4 +1,3 @@
-(function () {
     // Part 1: Curve Mathematics
     function clamp01(value) {
         if (value < 0) {
@@ -525,5 +524,3 @@
             selectedKeyIndices
         );
     };
-
-})();

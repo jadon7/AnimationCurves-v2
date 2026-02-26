@@ -143,6 +143,28 @@ function selectCurve(curveDef) {
   applyToKeyframes();
 }
 
+// Throttle function for smooth slider dragging
+function throttle(func, delay) {
+  let timeoutId = null;
+  let lastExecTime = 0;
+
+  return function(...args) {
+    const currentTime = Date.now();
+    const timeSinceLastExec = currentTime - lastExecTime;
+
+    if (timeSinceLastExec >= delay) {
+      func.apply(this, args);
+      lastExecTime = currentTime;
+    } else {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        func.apply(this, args);
+        lastExecTime = Date.now();
+      }, delay - timeSinceLastExec);
+    }
+  };
+}
+
 // Build Parameter Controls
 function buildParameterControls(curveDef) {
   const panel = document.getElementById('parameters-panel');
@@ -206,12 +228,17 @@ function buildParameterControls(curveDef) {
       input.value = formatNumber(param.defaultValue, getDecimals(param.step));
       sliderGroup.appendChild(input);
 
-      // Slider input event (preview only)
+      // Create throttled update function for smooth dragging
+      const throttledUpdate = throttle(() => {
+        updatePreview();
+      }, 16); // ~60fps
+
+      // Slider input event (preview only, throttled)
       slider.addEventListener('input', () => {
         const value = parseFloat(slider.value);
         input.value = formatNumber(value, getDecimals(param.step));
         currentParams[param.key] = value;
-        updatePreview();
+        throttledUpdate();
       });
 
       // Slider change event (preview + apply)
