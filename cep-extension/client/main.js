@@ -35,6 +35,13 @@ const PLATFORM_DATA = {
           { key: 'tension', label: 'Tension', type: 'slider', min: 10.0, max: 300.0, step: 1.0, defaultValue: 160.0 },
           { key: 'friction', label: 'Friction', type: 'slider', min: 0.0, max: 80.0, step: 0.1, defaultValue: 18.0 }
         ]
+      },
+      {
+        name: 'Fling',
+        params: [
+          { key: 'velocity', label: 'Velocity', type: 'slider', min: 1.0, max: 10.0, step: 0.1, defaultValue: 5.0 },
+          { key: 'friction', label: 'Friction', type: 'slider', min: 0.1, max: 5.0, step: 0.1, defaultValue: 1.0 }
+        ]
       }
     ]
   },

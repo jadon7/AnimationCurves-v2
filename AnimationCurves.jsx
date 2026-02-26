@@ -209,6 +209,87 @@
         return x;
     };
 
+    function AndroidFlingCurve(velocity, friction) {
+        this.velocity = (typeof velocity === 'number') ? velocity : 5.0;
+        this.friction = (typeof friction === 'number' && friction > 0) ? friction : 1.0;
+    }
+
+    AndroidFlingCurve.prototype.getValue = function (t) {
+        var clampedT = clamp01(t);
+        if (clampedT === 0) {
+            return 0;
+        }
+        if (clampedT === 1) {
+            return 1;
+        }
+
+        var velocity = this.velocity;
+        var friction = this.friction;
+        var referenceDuration = 1.0;
+        var physicsTime = clampedT * referenceDuration;
+
+        // Fling animation: exponential decay
+        // position = velocity * (1 - e^(-friction * t)) / friction
+        var decay = Math.exp(-friction * physicsTime);
+        var distance = velocity * (1 - decay) / friction;
+
+        // Normalize to 0-1 range
+        var maxDistance = velocity / friction;
+        var normalizedValue = distance / maxDistance;
+
+        return normalizedValue;
+    };
+
+    function IOSPhysicsCurve(mass, stiffness, damping) {
+        this.mass = (typeof mass === 'number' && mass > 0) ? mass : 1.0;
+        this.stiffness = (typeof stiffness === 'number' && stiffness > 0) ? stiffness : 200.0;
+        this.damping = (typeof damping === 'number' && damping >= 0) ? damping : 20.0;
+    }
+
+    IOSPhysicsCurve.prototype.getValue = function (t) {
+        var clampedT = clamp01(t);
+        if (clampedT === 0) {
+            return 0;
+        }
+        if (clampedT === 1) {
+            return 1;
+        }
+
+        var mass = this.mass;
+        var stiffness = this.stiffness;
+        var damping = this.damping;
+
+        // Calculate natural frequency and damping ratio
+        var omega = Math.sqrt(stiffness / mass);
+        var zeta = damping / (2 * Math.sqrt(stiffness * mass));
+
+        // Auto-calculate settling time
+        var settlingTime = 4 / (zeta * omega);
+        var referenceDuration = Math.max(settlingTime, 0.1);
+        var physicsTime = clampedT * referenceDuration;
+
+        var value;
+        if (zeta < 1) {
+            // Underdamped
+            var omegaD = omega * Math.sqrt(1 - zeta * zeta);
+            var envelope = Math.exp(-zeta * omega * physicsTime);
+            value = 1 - envelope * (Math.cos(omegaD * physicsTime) + (zeta * omega / omegaD) * Math.sin(omegaD * physicsTime));
+        } else if (zeta === 1) {
+            // Critically damped
+            var envelope = Math.exp(-omega * physicsTime);
+            value = 1 - envelope * (1 + omega * physicsTime);
+        } else {
+            // Overdamped
+            var r1 = -omega * (zeta + Math.sqrt(zeta * zeta - 1));
+            var r2 = -omega * (zeta - Math.sqrt(zeta * zeta - 1));
+            var C1 = r2 / (r2 - r1);
+            var C2 = -r1 / (r2 - r1);
+            value = 1 - C1 * Math.exp(r1 * physicsTime) - C2 * Math.exp(r2 * physicsTime);
+        }
+
+        return value;
+    };
+
     // Part 2: Expression Generator
     function ExpressionGenerator() {
         this.templates = {
@@ -225,7 +306,8 @@
                 spring: this._buildFolmeSpring
             },
             android: {
-                spring: this._buildAndroidSpring
+                spring: this._buildAndroidSpring,
+                fling: this._buildAndroidFling
             }
         };
     }
@@ -526,6 +608,37 @@
         );
     };
 
+    ExpressionGenerator.prototype._buildAndroidFlingCode = function (velocity, friction) {
+        return "    var velocity = " + velocity + ";\n" +
+            "    var friction = " + friction + ";\n" +
+            "    var referenceDuration = 1.0;\n" +
+            "    if (t === 0) {\n" +
+            "      val = 0;\n" +
+            "    } else if (t === 1) {\n" +
+            "      val = 1;\n" +
+            "    } else {\n" +
+            "      var physicsTime = t * referenceDuration;\n" +
+            "      var decay = Math.exp(-friction * physicsTime);\n" +
+            "      var distance = velocity * (1 - decay) / friction;\n" +
+            "      var maxDistance = velocity / friction;\n" +
+            "      val = distance / maxDistance;\n" +
+            "    }\n";
+    };
+
+    ExpressionGenerator.prototype._buildAndroidFling = function (params, selectedKeyIndices) {
+        var velocity = (params.velocity !== undefined) ? params.velocity : 5.0;
+        var friction = (params.friction !== undefined) ? params.friction : 1.0;
+        var curveCode = this._buildAndroidFlingCode(velocity, friction);
+
+        return this._composeExpression(
+            'Android - FlingAnimation',
+            'velocity=' + velocity + ', friction=' + friction,
+            curveCode,
+            { usePhysicalDuration: true, duration: 1.0 },
+            selectedKeyIndices
+        );
+    };
+
     // Part 3: Data Model
     function Model() {
         this.platform = 'rive';
@@ -670,6 +783,13 @@
                     ensureNumber(cfg.velocity, 'velocity', 0.0)
                 );
             }
+            if (t === 'physics') {
+                return new IOSPhysicsCurve(
+                    ensurePositiveNumber(cfg.mass, 'mass', 1.0),
+                    ensurePositiveNumber(cfg.stiffness, 'stiffness', 200.0),
+                    ensureNonNegativeNumber(cfg.damping, 'damping', 20.0)
+                );
+            }
             throw new Error('Unsupported iOS curve: ' + type);
         }
 
@@ -688,6 +808,12 @@
                 return new AndroidSpringCurve(
                     ensurePositiveNumber(cfg.tension, 'tension', 160.0),
                     ensureNonNegativeNumber(cfg.friction, 'friction', 18.0)
+                );
+            }
+            if (t === 'fling') {
+                return new AndroidFlingCurve(
+                    ensureNumber(cfg.velocity, 'velocity', 5.0),
+                    ensurePositiveNumber(cfg.friction, 'friction', 1.0)
                 );
             }
             throw new Error('Unsupported Android curve: ' + type);
@@ -761,6 +887,13 @@
                     params: [
                         { key: 'tension', label: 'Tension', type: 'slider', min: 10.0, max: 300.0, step: 1.0, defaultValue: 160.0 },
                         { key: 'friction', label: 'Friction', type: 'slider', min: 0.0, max: 80.0, step: 0.1, defaultValue: 18.0 }
+                    ]
+                },
+                {
+                    name: 'Fling',
+                    params: [
+                        { key: 'velocity', label: 'Velocity', type: 'slider', min: 1.0, max: 10.0, step: 0.1, defaultValue: 5.0 },
+                        { key: 'friction', label: 'Friction', type: 'slider', min: 0.1, max: 5.0, step: 0.1, defaultValue: 1.0 }
                     ]
                 }
             ]

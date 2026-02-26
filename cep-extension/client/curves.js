@@ -131,6 +131,32 @@ class AndroidSpringCurve {
   }
 }
 
+class AndroidFlingCurve {
+  constructor(velocity = 5.0, friction = 1.0) {
+    this.velocity = velocity;
+    this.friction = friction > 0 ? friction : 1.0;
+  }
+
+  getValue(t) {
+    const clampedT = clamp01(t);
+    if (clampedT === 0) return 0;
+    if (clampedT === 1) return 1;
+
+    const velocity = this.velocity;
+    const friction = this.friction;
+    const referenceDuration = 1.0;
+    const physicsTime = clampedT * referenceDuration;
+
+    // Fling animation: exponential decay
+    const decay = Math.exp(-friction * physicsTime);
+    const distance = velocity * (1 - decay) / friction;
+
+    // Normalize to 0-1 range
+    const maxDistance = velocity / friction;
+    return distance / maxDistance;
+  }
+}
+
 // Curve Factory
 class CurveFactory {
   createCurve(platform, curveType, params) {
@@ -153,8 +179,13 @@ class CurveFactory {
       return new FolmeSpringCurve(params.damping, params.response);
     }
 
-    if (p === 'android' && c === 'spring') {
-      return new AndroidSpringCurve(params.tension, params.friction);
+    if (p === 'android') {
+      if (c === 'spring') {
+        return new AndroidSpringCurve(params.tension, params.friction);
+      }
+      if (c === 'fling') {
+        return new AndroidFlingCurve(params.velocity, params.friction);
+      }
     }
 
     throw new Error(`Unsupported curve: ${platform} / ${curveType}`);

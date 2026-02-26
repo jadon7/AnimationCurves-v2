@@ -261,7 +261,8 @@
                 spring: this._buildFolmeSpring
             },
             android: {
-                spring: this._buildAndroidSpring
+                spring: this._buildAndroidSpring,
+                fling: this._buildAndroidFling
             }
         };
     }
@@ -558,6 +559,37 @@
             'tension=' + tension + ', friction=' + friction,
             curveCode,
             undefined,
+            selectedKeyIndices
+        );
+    };
+
+    ExpressionGenerator.prototype._buildAndroidFlingCode = function (velocity, friction) {
+        return "    var velocity = " + velocity + ";\n" +
+            "    var friction = " + friction + ";\n" +
+            "    var referenceDuration = 1.0;\n" +
+            "    if (t === 0) {\n" +
+            "      val = 0;\n" +
+            "    } else if (t === 1) {\n" +
+            "      val = 1;\n" +
+            "    } else {\n" +
+            "      var physicsTime = t * referenceDuration;\n" +
+            "      var decay = Math.exp(-friction * physicsTime);\n" +
+            "      var distance = velocity * (1 - decay) / friction;\n" +
+            "      var maxDistance = velocity / friction;\n" +
+            "      val = distance / maxDistance;\n" +
+            "    }\n";
+    };
+
+    ExpressionGenerator.prototype._buildAndroidFling = function (params, selectedKeyIndices) {
+        var velocity = (params.velocity !== undefined) ? params.velocity : 5.0;
+        var friction = (params.friction !== undefined) ? params.friction : 1.0;
+        var curveCode = this._buildAndroidFlingCode(velocity, friction);
+
+        return this._composeExpression(
+            'Android - FlingAnimation',
+            'velocity=' + velocity + ', friction=' + friction,
+            curveCode,
+            { usePhysicalDuration: true, duration: 1.0 },
             selectedKeyIndices
         );
     };
