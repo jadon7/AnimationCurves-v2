@@ -23,8 +23,14 @@ Adobe After Effects CEP 扩展，为关键帧属性应用物理弹簧动画曲�
 
 ### 方式一：运行安装脚本（推荐）
 
+**macOS / Linux:**
 ```bash
 ./install.sh
+```
+
+**Windows:**
+```cmd
+install.bat
 ```
 
 脚本会自动开启 CEP 调试模式，并将扩展复制到 AE 的扩展目录。完成后重启 After Effects，打开 `Window > Extensions > Animation Curves`。
@@ -55,8 +61,14 @@ Adobe After Effects CEP 扩展，为关键帧属性应用物理弹簧动画曲�
 
 如果你需要修改代码并实时生效，使用符号链接模式：
 
+**macOS / Linux:**
 ```bash
 ./install.sh --dev
+```
+
+**Windows:**
+```cmd
+install.bat --dev
 ```
 
 ## 使用方法
@@ -80,7 +92,8 @@ Adobe After Effects CEP 扩展，为关键帧属性应用物理弹簧动画曲�
 ├── host/                     # 后端 (ExtendScript)
 │   ├── index.jsx            # 主入口
 │   └── expression-generator.jsx  # 表达式生成器 + 曲线类
-├── install.sh               # 安装脚本
+├── install.sh               # 安装脚本 (macOS/Linux)
+├── install.bat              # 安装脚本 (Windows)
 └── .debug                   # 调试配置
 ```
 
