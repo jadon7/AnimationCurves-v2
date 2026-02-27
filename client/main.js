@@ -9,8 +9,8 @@ const PLATFORM_DATA = {
       {
         name: 'Elastic',
         params: [
-          { key: 'amplitude', label: 'Amplitude', type: 'slider', min: 1.0, max: 3.0, step: 0.01, defaultValue: 1.0 },
-          { key: 'period', label: 'Period', type: 'slider', min: 0.1, max: 2.0, step: 0.01, defaultValue: 1.0 },
+          { key: 'amplitude', label: 'Amplitude', type: 'slider', min: 0, max: 5.0, step: 0.01, defaultValue: 1.0 },
+          { key: 'period', label: 'Period', type: 'slider', min: 0, max: 5.0, step: 0.01, defaultValue: 1.0 },
           { key: 'easingType', label: 'Easing Type', type: 'dropdown', options: ['Ease Out', 'Ease In', 'Ease In-Out'], defaultValue: 'Ease Out' }
         ]
       }
@@ -32,30 +32,43 @@ const PLATFORM_DATA = {
       {
         name: 'Spring',
         params: [
-          { key: 'tension', label: 'Tension', type: 'slider', min: 10.0, max: 300.0, step: 1.0, defaultValue: 160.0 },
-          { key: 'friction', label: 'Friction', type: 'slider', min: 0.0, max: 80.0, step: 0.1, defaultValue: 18.0 }
+          { key: 'stiffness', label: 'Stiffness', type: 'slider', min: 50.0, max: 10000.0, step: 1.0, defaultValue: 450.0 },
+          { key: 'dampingRatio', label: 'Damping Ratio', type: 'slider', min: 0.0, max: 2.0, step: 0.01, defaultValue: 0.5 }
+        ]
+      },
+      {
+        name: 'Fling',
+        params: [
+          { key: 'startVelocity', label: 'Start Velocity', type: 'slider', min: 100.0, max: 5000.0, step: 10.0, defaultValue: 2000.0 },
+          { key: 'friction', label: 'Friction', type: 'slider', min: 0.1, max: 10.0, step: 0.1, defaultValue: 1.0 }
         ]
       }
     ]
   },
   ios: {
     curves: [
-      { name: 'Spring Default', params: [
-        { key: 'damping', label: 'Damping', type: 'slider', min: 0.1, max: 1.0, step: 0.01, defaultValue: 0.8 },
-        { key: 'velocity', label: 'Velocity', type: 'slider', min: 0.0, max: 3.0, step: 0.01, defaultValue: 0.0 }
-      ]},
-      { name: 'Spring Gentle', params: [
-        { key: 'damping', label: 'Damping', type: 'slider', min: 0.1, max: 1.0, step: 0.01, defaultValue: 0.9 },
-        { key: 'velocity', label: 'Velocity', type: 'slider', min: 0.0, max: 3.0, step: 0.01, defaultValue: 0.0 }
-      ]},
-      { name: 'Spring Bouncy', params: [
-        { key: 'damping', label: 'Damping', type: 'slider', min: 0.1, max: 1.0, step: 0.01, defaultValue: 0.5 },
-        { key: 'velocity', label: 'Velocity', type: 'slider', min: 0.0, max: 3.0, step: 0.01, defaultValue: 0.2 }
-      ]},
-      { name: 'Spring Custom', params: [
-        { key: 'damping', label: 'Damping', type: 'slider', min: 0.1, max: 1.0, step: 0.01, defaultValue: 0.7 },
-        { key: 'velocity', label: 'Velocity', type: 'slider', min: 0.0, max: 3.0, step: 0.01, defaultValue: 0.0 }
-      ]}
+      {
+        name: 'Duration + Bounce',
+        params: [
+          { key: 'duration', label: 'Duration', type: 'slider', min: 0.1, max: 2.0, step: 0.01, defaultValue: 0.2 },
+          { key: 'bounce', label: 'Bounce', type: 'slider', min: -1.0, max: 1.0, step: 0.01, defaultValue: 0.2 }
+        ]
+      },
+      {
+        name: 'Response + Damping',
+        params: [
+          { key: 'response', label: 'Response', type: 'slider', min: 0.1, max: 2.0, step: 0.01, defaultValue: 0.3 },
+          { key: 'dampingFraction', label: 'Damping Fraction', type: 'slider', min: 0.0, max: 2.0, step: 0.01, defaultValue: 0.2 }
+        ]
+      },
+      {
+        name: 'Physics',
+        params: [
+          { key: 'mass', label: 'Mass', type: 'slider', min: 0.1, max: 10.0, step: 0.1, defaultValue: 1.0 },
+          { key: 'stiffness', label: 'Stiffness', type: 'slider', min: 10.0, max: 500.0, step: 1.0, defaultValue: 200.0 },
+          { key: 'damping', label: 'Damping', type: 'slider', min: 0.0, max: 100.0, step: 0.1, defaultValue: 20.0 }
+        ]
+      }
     ]
   }
 };
@@ -97,9 +110,18 @@ function switchPlatform(platform) {
 // Update Curve Dropdown
 function updateCurveDropdown() {
   const dropdown = document.getElementById('curve-dropdown');
+  const curveSelection = document.querySelector('.curve-selection');
   dropdown.innerHTML = '';
 
   const curves = PLATFORM_DATA[currentPlatform].curves;
+
+  // Hide dropdown if only one curve type
+  if (curves.length <= 1) {
+    curveSelection.style.display = 'none';
+  } else {
+    curveSelection.style.display = 'flex';
+  }
+
   curves.forEach((curve, index) => {
     const option = document.createElement('option');
     option.value = index;

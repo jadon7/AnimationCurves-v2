@@ -1,90 +1,79 @@
 # Animation Curves v2 for After Effects
 
-Animation Curves v2 applies physics-based timing curves directly to selected keyframed properties in Adobe After Effects.
+Adobe After Effects CEP 扩展，为关键帧属性应用物理弹簧动画曲线。支持 4 个平台共 7 条曲线，可停靠面板，实时预览。
 
-**Available in two versions:**
-- **ExtendScript** (single-file .jsx) - Floating window, easy installation
-- **CEP Extension** (dockable panel) - Modern UI, integrates into workspace
+## 支持的曲线
 
-It includes **7 curves from 4 platforms**:
-- **Rive**: 1 elastic curve
-- **Folme**: 1 spring curve
-- **Android**: 1 spring curve
-- **iOS**: 4 spring curves
+| 平台 | 曲线 | 参数 |
+|------|------|------|
+| Rive | Elastic | amplitude, period, easingType |
+| Folme | Spring | damping, response |
+| Android | Spring | stiffness, dampingRatio |
+| Android | Fling | startVelocity, friction |
+| iOS | Duration + Bounce | duration, bounce |
+| iOS | Response + Damping | response, dampingFraction |
+| iOS | Physics | mass, stiffness, damping |
 
-## Features
+## 系统要求
 
-- Single-file script (`AnimationCurves.jsx`), no external dependencies
-- Platform tabs: **Rive**, **Folme**, **Android**, **iOS**
-- 7 production-ready physics curves with parameter controls
-- Real-time curve preview with dark theme (280x110px canvas)
-- Auto-apply on parameter changes with live preview
-- Selective keyframe segment application (only applies to selected keyframes)
-- Batch apply to multiple properties in one operation
-- Built-in validation and user-facing error messages
+- Adobe After Effects CC 2015+
+- macOS 或 Windows
 
-## System Requirements
+## 安装
 
-- Adobe After Effects **CC 2015 or later**
-- macOS or Windows environment supported by your AE version
+### macOS
 
-## Installation
-
-### Option 1: ExtendScript (Recommended for Quick Start)
-
-1. Locate your After Effects Scripts UI Panels folder:
-   - macOS: `/Applications/Adobe After Effects <version>/Scripts/ScriptUI Panels/`
-   - Windows: `C:\Program Files\Adobe\Adobe After Effects <version>\Support Files\Scripts\ScriptUI Panels\`
-2. Copy `AnimationCurves.jsx` into that folder.
-3. Start or restart After Effects.
-4. Open from `Window > AnimationCurves.jsx`.
-
-**Pros:** Single file, instant setup, works everywhere
-**Cons:** Floating window (not dockable)
-
-### Option 2: CEP Extension (Dockable Panel)
-
-See detailed instructions in [`cep-extension/README.md`](cep-extension/README.md)
-
-**Pros:** Dockable panel, modern UI, integrates into workspace
-**Cons:** More complex setup, requires additional files
-
-Quick setup:
 ```bash
-cd cep-extension
+# 1. 开启 CEP 调试模式
+defaults write com.adobe.CSXS.11 PlayerDebugMode 1
+
+# 2. 创建符号链接（将路径替换为你的实际项目路径）
+ln -s /path/to/AnimationCurves-v2 ~/Library/Application\ Support/Adobe/CEP/extensions/com.animationcurves.panel
+
+# 3. 重启 After Effects，打开 Window > Extensions > Animation Curves
+```
+
+或者直接运行安装脚本：
+
+```bash
 ./install-dev.sh
 ```
 
-Then restart After Effects and go to `Window > Extensions > Animation Curves`.
+### Windows
 
-## Quick Start
+1. 打开注册表编辑器，导航到 `HKEY_CURRENT_USER\Software\Adobe\CSXS.11`，创建 DWORD `PlayerDebugMode` 值为 `1`
+2. 将项目文件夹复制或创建符号链接到 `C:\Program Files (x86)\Common Files\Adobe\CEP\extensions\com.animationcurves.panel`
+3. 重启 After Effects，打开 Window > Extensions > Animation Curves
 
-1. Open a composition with keyframed properties.
-2. Select one or more keyframes in the timeline (not just properties).
-3. Open `Window > AnimationCurves.jsx`.
-4. Choose a tab: **Rive**, **Folme**, **Android**, or **iOS**.
-5. Select a curve and adjust parameters using sliders.
-6. Curves auto-apply on parameter changes - watch the preview update in real-time.
-7. Preview animation and iterate parameters as needed.
+### CSInterface.js
 
-## Curve Library (7 Total)
+首次安装需要下载 [CSInterface.js](https://github.com/Adobe-CEP/CEP-Resources/blob/master/CEP_11.x/CSInterface.js) 并放到 `client/lib/CSInterface.js`。
 
-### Rive (1)
-- Elastic (Amplitude: 1.0, Period: 1.0, Easing: Ease Out)
+## 使用方法
 
-### Folme (1)
-- Spring (Damping: 0.95, Response: 0.35)
+1. 打开包含关键帧的合成
+2. 在时间线中选择关键帧
+3. 打开 Window > Extensions > Animation Curves
+4. 选择平台和曲线类型，调整参数
+5. 点击 Apply 应用到选中的关键帧
 
-### Android (1)
-- Spring (Tension: 160, Friction: 18)
+## 项目结构
 
-### iOS (4)
-- Spring Default (Damping: 0.8, Velocity: 0.0)
-- Spring Gentle (Damping: 0.9, Velocity: 0.0)
-- Spring Bouncy (Damping: 0.5, Velocity: 0.2)
-- Spring Custom (Damping: 0.7, Velocity: 0.0)
+```
+├── CSXS/manifest.xml        # CEP 扩展清单
+├── client/                   # 前端 (HTML/CSS/JS)
+│   ├── index.html
+│   ├── styles.css
+│   ├── main.js              # 应用逻辑、UI、预览
+│   ├── curves.js            # 曲线数学实现
+│   └── lib/CSInterface.js   # Adobe CEP 库（需单独下载）
+├── host/                     # 后端 (ExtendScript)
+│   ├── index.jsx            # 主入口
+│   └── expression-generator.jsx  # 表达式生成器 + 曲线类
+├── install-dev.sh           # 安装脚本
+└── .debug                   # 调试配置
+```
 
-## Documentation
+## License
 
-- User guide: `USER_GUIDE.md`
-- Practical examples: `EXAMPLES.md`
+MIT
