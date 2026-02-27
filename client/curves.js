@@ -37,7 +37,7 @@ class RiveElasticCurve {
 }
 
 class IOSDurationBounceCurve {
-  constructor(duration = 0.5, bounce = 0.0) {
+  constructor(duration = 0.2, bounce = 0.2) {
     this.duration = Math.max(duration, 0.01);
     this.bounce = Math.max(-1, Math.min(1, bounce));
   }
@@ -62,7 +62,7 @@ class IOSDurationBounceCurve {
 }
 
 class IOSResponseDampingCurve {
-  constructor(response = 0.5, dampingFraction = 0.825) {
+  constructor(response = 0.3, dampingFraction = 0.2) {
     this.response = Math.max(response, 0.01);
     this.dampingFraction = Math.max(dampingFraction, 0);
   }
@@ -105,25 +105,42 @@ class IOSPhysicsCurve {
     if (clampedT === 0) return 0;
     if (clampedT === 1) return 1;
 
-    const omega = Math.sqrt(this.stiffness / this.mass);
-    const zeta = this.damping / (2 * Math.sqrt(this.stiffness * this.mass));
-    const settlingTime = Math.max(4 / (zeta * omega), 0.1);
+    const z = this.damping / (2 * Math.sqrt(this.stiffness * this.mass));
+    const w = Math.sqrt(this.stiffness / this.mass);
+    const v = 0; // initialVelocity
+    const s = -1; // from(0) - to(1)
+    const c = w * z;
+    const a = w * Math.sqrt(Math.abs(1 - z * z));
+
+    // Calculate settling time based on damping regime
+    let settlingTime;
+    if (z < 1) {
+      settlingTime = 4.0 / (Math.max(z, 0.001) * w);
+    } else if (z === 1) {
+      settlingTime = 4.0 / w;
+    } else {
+      const slowRoot = w * (z - Math.sqrt(z * z - 1));
+      settlingTime = 4.0 / slowRoot;
+    }
+    settlingTime = Math.min(Math.max(settlingTime, 0.1), 10.0);
     const tau = clampedT * settlingTime;
 
-    if (zeta < 1) {
-      const omegaD = omega * Math.sqrt(1 - zeta * zeta);
-      const envelope = Math.exp(-zeta * omega * tau);
-      return 1 - envelope * (Math.cos(omegaD * tau) + (zeta * omega / omegaD) * Math.sin(omegaD * tau));
+    if (z > 1) {
+      // Overdamped
+      const A = a * s;
+      const B = v + c * s;
+      return 1 + (Math.exp(-c * tau) * (A * Math.cosh(a * tau) + B * Math.sinh(a * tau))) / a;
+    } else if (z === 1) {
+      // Critically damped
+      const A = s;
+      const B = v + c * s;
+      return 1 + Math.exp(-c * tau) * (A + B * tau);
+    } else {
+      // Underdamped
+      const A = s;
+      const B = (v + c * s) / a;
+      return 1 + Math.exp(-c * tau) * (A * Math.cos(a * tau) + B * Math.sin(a * tau));
     }
-    if (zeta === 1) {
-      const envelope = Math.exp(-omega * tau);
-      return 1 - envelope * (1 + omega * tau);
-    }
-    const r1 = -omega * (zeta + Math.sqrt(zeta * zeta - 1));
-    const r2 = -omega * (zeta - Math.sqrt(zeta * zeta - 1));
-    const C1 = r2 / (r2 - r1);
-    const C2 = -r1 / (r2 - r1);
-    return 1 - C1 * Math.exp(r1 * tau) - C2 * Math.exp(r2 * tau);
   }
 }
 
@@ -166,7 +183,7 @@ class FolmeSpringCurve {
 }
 
 class AndroidSpringCurve {
-  constructor(stiffness = 1500.0, dampingRatio = 0.5) {
+  constructor(stiffness = 450.0, dampingRatio = 0.5) {
     this.stiffness = Math.max(stiffness, 0.01);
     this.dampingRatio = Math.max(dampingRatio, 0);
   }
@@ -176,31 +193,47 @@ class AndroidSpringCurve {
     if (clampedT === 0) return 0;
     if (clampedT === 1) return 1;
 
-    const mass = 1.0;
-    const omega = Math.sqrt(this.stiffness / mass);
-    const zeta = this.dampingRatio;
-    const settlingTime = Math.max(4 / (Math.max(zeta, 0.001) * omega), 0.1);
+    const z = this.dampingRatio;
+    const w = Math.sqrt(this.stiffness);
+    const v = 0; // startVelocity
+    const s = -1; // from(0) - to(1)
+    const c = w * z;
+    const a = w * Math.sqrt(Math.abs(1 - z * z));
+
+    // Calculate settling time based on damping regime
+    let settlingTime;
+    if (z < 1) {
+      settlingTime = 4.0 / (Math.max(z, 0.001) * w);
+    } else if (z === 1) {
+      settlingTime = 4.0 / w;
+    } else {
+      const slowRoot = w * (z - Math.sqrt(z * z - 1));
+      settlingTime = 4.0 / slowRoot;
+    }
+    settlingTime = Math.min(Math.max(settlingTime, 0.1), 10.0);
     const tau = clampedT * settlingTime;
 
-    if (zeta < 1) {
-      const omegaD = omega * Math.sqrt(1 - zeta * zeta);
-      const envelope = Math.exp(-zeta * omega * tau);
-      return 1 - envelope * (Math.cos(omegaD * tau) + (zeta * omega / omegaD) * Math.sin(omegaD * tau));
+    if (z > 1) {
+      // Overdamped
+      const A = a * s;
+      const B = v + c * s;
+      return 1 + (Math.exp(-c * tau) * (A * Math.cosh(a * tau) + B * Math.sinh(a * tau))) / a;
+    } else if (z === 1) {
+      // Critically damped
+      const A = s;
+      const B = v + c * s;
+      return 1 + Math.exp(-c * tau) * (A + B * tau);
+    } else {
+      // Underdamped
+      const A = s;
+      const B = (v + c * s) / a;
+      return 1 + Math.exp(-c * tau) * (A * Math.cos(a * tau) + B * Math.sin(a * tau));
     }
-    if (zeta === 1) {
-      const envelope = Math.exp(-omega * tau);
-      return 1 - envelope * (1 + omega * tau);
-    }
-    const r1 = -omega * (zeta + Math.sqrt(zeta * zeta - 1));
-    const r2 = -omega * (zeta - Math.sqrt(zeta * zeta - 1));
-    const C1 = r2 / (r2 - r1);
-    const C2 = -r1 / (r2 - r1);
-    return 1 - C1 * Math.exp(r1 * tau) - C2 * Math.exp(r2 * tau);
   }
 }
 
 class AndroidFlingCurve {
-  constructor(startVelocity = 5000.0, friction = 1.0) {
+  constructor(startVelocity = 2000.0, friction = 1.0) {
     this.startVelocity = startVelocity;
     this.friction = friction > 0 ? friction : 1.0;
   }
@@ -211,12 +244,19 @@ class AndroidFlingCurve {
     if (clampedT === 1) return 1;
 
     const velocity = Math.abs(this.startVelocity);
-    const friction = this.friction;
-    const physicsTime = clampedT;
-    const decay = Math.exp(-friction * physicsTime);
-    const distance = velocity * (1 - decay) / friction;
-    const maxDistance = velocity / friction;
-    return distance / maxDistance;
+    const frictionCoeff = this.friction * -4.2; // ExponentialDecayFriction = -4.2
+
+    // Calculate fling duration: time until velocity effectively reaches 0
+    const velocityThreshold = 0.01;
+    const duration = Math.max(Math.log(velocityThreshold / velocity) / frictionCoeff, 0.1);
+
+    const physicsTime = clampedT * duration;
+
+    // Position: from - (velocity / friction) * (1 - exp(friction * t))
+    const position = -(velocity / frictionCoeff) * (1 - Math.exp(frictionCoeff * physicsTime));
+    const totalPosition = -(velocity / frictionCoeff) * (1 - Math.exp(frictionCoeff * duration));
+
+    return position / totalPosition;
   }
 }
 

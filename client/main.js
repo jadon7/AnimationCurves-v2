@@ -32,14 +32,14 @@ const PLATFORM_DATA = {
       {
         name: 'Spring',
         params: [
-          { key: 'stiffness', label: 'Stiffness', type: 'slider', min: 50.0, max: 10000.0, step: 1.0, defaultValue: 1500.0 },
+          { key: 'stiffness', label: 'Stiffness', type: 'slider', min: 50.0, max: 10000.0, step: 1.0, defaultValue: 450.0 },
           { key: 'dampingRatio', label: 'Damping Ratio', type: 'slider', min: 0.0, max: 2.0, step: 0.01, defaultValue: 0.5 }
         ]
       },
       {
         name: 'Fling',
         params: [
-          { key: 'startVelocity', label: 'Start Velocity', type: 'slider', min: 100.0, max: 5000.0, step: 10.0, defaultValue: 5000.0 },
+          { key: 'startVelocity', label: 'Start Velocity', type: 'slider', min: 100.0, max: 5000.0, step: 10.0, defaultValue: 2000.0 },
           { key: 'friction', label: 'Friction', type: 'slider', min: 0.1, max: 10.0, step: 0.1, defaultValue: 1.0 }
         ]
       }
@@ -50,15 +50,15 @@ const PLATFORM_DATA = {
       {
         name: 'Duration + Bounce',
         params: [
-          { key: 'duration', label: 'Duration', type: 'slider', min: 0.1, max: 2.0, step: 0.01, defaultValue: 0.5 },
-          { key: 'bounce', label: 'Bounce', type: 'slider', min: -1.0, max: 1.0, step: 0.01, defaultValue: 0.0 }
+          { key: 'duration', label: 'Duration', type: 'slider', min: 0.1, max: 2.0, step: 0.01, defaultValue: 0.2 },
+          { key: 'bounce', label: 'Bounce', type: 'slider', min: -1.0, max: 1.0, step: 0.01, defaultValue: 0.2 }
         ]
       },
       {
         name: 'Response + Damping',
         params: [
-          { key: 'response', label: 'Response', type: 'slider', min: 0.1, max: 2.0, step: 0.01, defaultValue: 0.5 },
-          { key: 'dampingFraction', label: 'Damping Fraction', type: 'slider', min: 0.0, max: 2.0, step: 0.01, defaultValue: 0.825 }
+          { key: 'response', label: 'Response', type: 'slider', min: 0.1, max: 2.0, step: 0.01, defaultValue: 0.3 },
+          { key: 'dampingFraction', label: 'Damping Fraction', type: 'slider', min: 0.0, max: 2.0, step: 0.01, defaultValue: 0.2 }
         ]
       },
       {
