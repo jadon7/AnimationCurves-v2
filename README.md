@@ -21,39 +21,49 @@ Adobe After Effects CEP 扩展，为关键帧属性应用物理弹簧动画曲�
 
 ## 安装
 
-### macOS
+### 方式一：运行安装脚本（推荐）
 
 ```bash
-# 1. 开启 CEP 调试模式
-defaults write com.adobe.CSXS.11 PlayerDebugMode 1
-
-# 2. 创建符号链接（将路径替换为你的实际项目路径）
-ln -s /path/to/AnimationCurves-v2 ~/Library/Application\ Support/Adobe/CEP/extensions/com.animationcurves.panel
-
-# 3. 重启 After Effects，打开 Window > Extensions > Animation Curves
+./install.sh
 ```
 
-或者直接运行安装脚本：
+脚本会自动开启 CEP 调试模式，并将扩展复制到 AE 的扩展目录。完成后重启 After Effects，打开 `Window > Extensions > Animation Curves`。
 
-```bash
-./install-dev.sh
-```
+### 方式二：手动安装
 
-### Windows
+#### macOS
+
+1. 开启 CEP 调试模式（终端执行）：
+   ```bash
+   defaults write com.adobe.CSXS.11 PlayerDebugMode 1
+   ```
+
+2. 将项目文件夹复制到扩展目录，并重命名为 `com.animationcurves.panel`：
+   ```bash
+   cp -r /path/to/AnimationCurves-v2 ~/Library/Application\ Support/Adobe/CEP/extensions/com.animationcurves.panel
+   ```
+
+3. 重启 After Effects，打开 `Window > Extensions > Animation Curves`
+
+#### Windows
 
 1. 打开注册表编辑器，导航到 `HKEY_CURRENT_USER\Software\Adobe\CSXS.11`，创建 DWORD `PlayerDebugMode` 值为 `1`
-2. 将项目文件夹复制或创建符号链接到 `C:\Program Files (x86)\Common Files\Adobe\CEP\extensions\com.animationcurves.panel`
-3. 重启 After Effects，打开 Window > Extensions > Animation Curves
+2. 将项目文件夹复制到 `C:\Program Files (x86)\Common Files\Adobe\CEP\extensions\com.animationcurves.panel`
+3. 重启 After Effects，打开 `Window > Extensions > Animation Curves`
 
-### CSInterface.js
+### 开发者模式
 
-首次安装需要下载 [CSInterface.js](https://github.com/Adobe-CEP/CEP-Resources/blob/master/CEP_11.x/CSInterface.js) 并放到 `client/lib/CSInterface.js`。
+如果你需要修改代码并实时生效，使用符号链接模式：
+
+```bash
+./install.sh --dev
+```
 
 ## 使用方法
 
 1. 打开包含关键帧的合成
 2. 在时间线中选择关键帧
-3. 打开 Window > Extensions > Animation Curves
+3. 打开 `Window > Extensions > Animation Curves`
 4. 选择平台和曲线类型，调整参数
 5. 点击 Apply 应用到选中的关键帧
 
@@ -66,11 +76,11 @@ ln -s /path/to/AnimationCurves-v2 ~/Library/Application\ Support/Adobe/CEP/exten
 │   ├── styles.css
 │   ├── main.js              # 应用逻辑、UI、预览
 │   ├── curves.js            # 曲线数学实现
-│   └── lib/CSInterface.js   # Adobe CEP 库（需单独下载）
+│   └── lib/CSInterface.js   # Adobe CEP 库
 ├── host/                     # 后端 (ExtendScript)
 │   ├── index.jsx            # 主入口
 │   └── expression-generator.jsx  # 表达式生成器 + 曲线类
-├── install-dev.sh           # 安装脚本
+├── install.sh               # 安装脚本
 └── .debug                   # 调试配置
 ```
 
